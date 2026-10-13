@@ -2,7 +2,7 @@
 
 A collection of reusable AI agent skills from Clipwing. Each skill lives in its own folder under `skills/`, with a `SKILL.md` file and any supporting scripts or references.
 
-**[Browse the public catalog](https://clipwing.github.io/skills/)** — each skill has its own page, installation guide and direct download.
+**[Browse the public catalog](https://clipwing.pro/skills/)** — each skill has its own page, installation guide and direct download.
 
 ## Catalog
 
@@ -10,7 +10,7 @@ A collection of reusable AI agent skills from Clipwing. Each skill lives in its 
 | --- | --- | --- |
 | [HyperFrames → After Effects](skills/hyperframes-to-after-effects/) | Converts a HyperFrames project into an editable After Effects project with text, shapes, footage, precomps and keyframes, then compares frames against the original render. | [.skill package](packages/hyperframes-to-after-effects.skill) |
 
-Share this skill: [HyperFrames → After Effects](https://clipwing.github.io/skills/hyperframes-to-after-effects/).
+Share this skill: [HyperFrames → After Effects](https://clipwing.pro/skills/hyperframes-to-after-effects/).
 
 ## Install in Claude Code
 
@@ -84,9 +84,11 @@ The folders under `skills/` are the source of truth. Keep packaged downloads in 
 
 ## Public website
 
-The static catalog is published to **https://clipwing.github.io/skills/** by GitHub Pages. Every push to `main` builds and deploys it through `.github/workflows/pages.yml`.
+The public catalog lives on the main Clipwing website at **https://clipwing.pro/skills** and uses its shared branding and navigation. Its pages are maintained in [`Clipwing/clipwing-website`](https://github.com/Clipwing/clipwing-website).
 
-To add a skill to the website:
+GitHub Pages is retained for existing shared links and package distribution. It redirects catalog and skill-page visitors to the main website. Every push to `main` builds and deploys these compatibility pages through `.github/workflows/pages.yml`.
+
+To add a skill to this repository and its compatibility catalog:
 
 1. Add its source folder under `skills/`.
 2. Add its metadata to `site/catalog.json` (unique slug, name, summary, category, platform, version, update date and social image filename).
@@ -94,5 +96,7 @@ To add a skill to the website:
 4. Run `python3 scripts/build_site.py` to check the build, then commit the sources. The builder generates the catalog, pages, social metadata and `.skill` downloads in ignored `_site/`.
 
 Website downloads are built directly from `skills/<slug>/` on every deployment. The manually distributed archives in `packages/` are retained separately and should also be updated when a skill changes. Version labels in the catalog describe the skill; GitHub Releases are not yet configured.
+
+To update the main website, run `node scripts/sync-skills.mjs <full-commit-sha>` in `Clipwing/clipwing-website`, review its detail content and branded social images, then deploy it. The website serves a pinned snapshot of the catalog and packages; updating this repository alone does not change that reviewed snapshot.
 
 To preview locally, serve a parent directory that maps `_site/` to `/skills/`, matching the public GitHub Pages URL. No JavaScript framework, package installation or application server is needed for the deployed site.

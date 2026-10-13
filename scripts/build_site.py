@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "_site"
-BASE = "https://clipwing.github.io/skills"
+BASE = "https://clipwing.pro/skills"
 REPO = "https://github.com/Clipwing/skills"
 
 
@@ -17,20 +17,22 @@ def escape(value):
 
 
 def page(title, description, route, image, content):
-    canonical = BASE + route
+    canonical = BASE + route.rstrip("/")
+    redirect = f'<meta http-equiv="refresh" content="0; url={canonical}">' if route != "/404.html" else ""
     return f'''<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+{redirect}
 <title>{escape(title)}</title><meta name="description" content="{escape(description)}">
 <link rel="canonical" href="{canonical}">
 <meta property="og:type" content="website"><meta property="og:site_name" content="Clipwing Skills">
 <meta property="og:title" content="{escape(title)}"><meta property="og:description" content="{escape(description)}">
-<meta property="og:url" content="{canonical}"><meta property="og:image" content="{BASE}/assets/{image}">
+<meta property="og:url" content="{canonical}"><meta property="og:image" content="{BASE}/social/{image}">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="{escape(title)}">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{escape(title)}">
-<meta name="twitter:description" content="{escape(description)}"><meta name="twitter:image" content="{BASE}/assets/{image}">
+<meta name="twitter:description" content="{escape(description)}"><meta name="twitter:image" content="{BASE}/social/{image}">
 <link rel="icon" href="/skills/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/skills/assets/style.css">
 </head>
