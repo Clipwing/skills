@@ -2,11 +2,15 @@
 
 A collection of reusable AI agent skills from Clipwing. Each skill lives in its own folder under `skills/`, with a `SKILL.md` file and any supporting scripts or references.
 
+**[Browse the public catalog](https://clipwing.github.io/skills/)** — each skill has its own page, installation guide and direct download.
+
 ## Catalog
 
 | Skill | What it does | Download |
 | --- | --- | --- |
 | [HyperFrames → After Effects](skills/hyperframes-to-after-effects/) | Converts a HyperFrames project into an editable After Effects project with text, shapes, footage, precomps and keyframes, then compares frames against the original render. | [.skill package](packages/hyperframes-to-after-effects.skill) |
+
+Share this skill: [HyperFrames → After Effects](https://clipwing.github.io/skills/hyperframes-to-after-effects/).
 
 ## Install in Claude Code
 
@@ -77,3 +81,18 @@ README.md
 4. If distributing a `.skill` package, build it from the same source folder and update `packages/<skill-name>.skill` in the same change. The archive should contain a top-level `<skill-name>/` folder with `SKILL.md` inside it.
 
 The folders under `skills/` are the source of truth. Keep packaged downloads in sync with their source folders.
+
+## Public website
+
+The static catalog is published to **https://clipwing.github.io/skills/** by GitHub Pages. Every push to `main` builds and deploys it through `.github/workflows/pages.yml`.
+
+To add a skill to the website:
+
+1. Add its source folder under `skills/`.
+2. Add its metadata to `site/catalog.json` (unique slug, name, summary, category, platform, version, update date and social image filename).
+3. Add its detail page to `site/pages/<slug>.html` and a 1200 × 630 PNG preview to `site/assets/`. Use the existing page as a template; placeholders such as `{{download}}` and `{{source}}` are supplied by the builder.
+4. Run `python3 scripts/build_site.py` to check the build, then commit the sources. The builder generates the catalog, pages, social metadata and `.skill` downloads in ignored `_site/`.
+
+Website downloads are built directly from `skills/<slug>/` on every deployment. The manually distributed archives in `packages/` are retained separately and should also be updated when a skill changes. Version labels in the catalog describe the skill; GitHub Releases are not yet configured.
+
+To preview locally, serve a parent directory that maps `_site/` to `/skills/`, matching the public GitHub Pages URL. No JavaScript framework, package installation or application server is needed for the deployed site.

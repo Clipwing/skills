@@ -1,0 +1,15 @@
+[
+  {
+    "slug": "hyperframes-to-after-effects",
+    "name": "HyperFrames → After Effects",
+    "summary": "Take your HyperFrames animation into After Effects. Keep editable text, layers and keyframes.",
+    "category": "Animation & video",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-13",
+    "image": "hyperframes-to-after-effects.png",
+    "visual_from": "HF",
+    "visual_to": "Ae",
+    "visual_caption": "FROM THE WEB. INTO YOUR TIMELINE."
+  }
+]
