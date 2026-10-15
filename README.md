@@ -8,9 +8,9 @@ A collection of reusable AI agent skills from Clipwing. Each skill lives in its 
 
 | Skill | What it does | Download |
 | --- | --- | --- |
-| [HyperFrames → After Effects](skills/hyperframes-to-after-effects/) | Converts a HyperFrames project into an editable After Effects project with text, shapes, footage, precomps and keyframes, then compares frames against the original render. | [.skill package](packages/hyperframes-to-after-effects.skill) |
+| [HyperFrames to After Effects](skills/hyperframes-to-after-effects/) | Converts a HyperFrames project into an editable After Effects project with text, shapes, footage, precomps and keyframes, then compares frames against the original render. | [.skill package](packages/hyperframes-to-after-effects.skill) |
 
-Share this skill: [HyperFrames → After Effects](https://clipwing.pro/skills/hyperframes-to-after-effects/).
+Share this skill: [HyperFrames to After Effects](https://clipwing.pro/skills/hyperframes-to-after-effects/).
 
 ## Install in Claude Code
 
@@ -49,7 +49,7 @@ Open a `.skill` link in the catalog and use GitHub's **Download raw file** butto
 
 Packaged downloads are stored in `packages/`.
 
-## HyperFrames → After Effects prerequisites
+## HyperFrames to After Effects prerequisites
 
 - Node.js 18 or newer and a HyperFrames project that renders successfully.
 - Adobe After Effects 2023 or newer, with **Allow Scripts to Write Files and Access Network** enabled in its scripting preferences.

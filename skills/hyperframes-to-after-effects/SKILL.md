@@ -3,7 +3,7 @@ name: hyperframes-to-after-effects
 description: Convert a HyperFrames project (HTML/GSAP video compositions) into an editable Adobe After Effects project (.aep) with real layers and keyframes, not a rendered video. Text stays live text, cards become shape layers, images and video become footage, sub-compositions become precomps, animation becomes keyframes, and the result is checked against the HyperFrames render frame by frame. Use this whenever someone wants to move, port, export or "hand off" a HyperFrames / HTML video to After Effects or AE, wants an .aep from their HyperFrames composition, wants to keep editing a HyperFrames film in After Effects, or asks why an AE import of their HTML animation is slow or broken, even if they do not say "skill" or name the tool. Windows and macOS.
 ---
 
-# HyperFrames → After Effects
+# HyperFrames to After Effects
 
 A HyperFrames film is a paused GSAP timeline over HTML. This skill plays it in headless Chrome frame by frame, records
 what every element looks like, and rebuilds that in After Effects as native, editable layers:

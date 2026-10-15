@@ -42,7 +42,7 @@ Every frame `f` of the root (at `--fps`), `sample()` walks each visible composit
 - **Keys** (`k`): composition-relative DOM path with tag, `#id` or first class, and sibling index. Text lines add
   `#t<node>.<line>`; variants add `@<signature>`.
 
-## Entry types → layers
+## Entry types to layers
 
 | Type | Export | Build |
 |---|---|---|
