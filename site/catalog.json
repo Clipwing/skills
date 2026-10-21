@@ -11,5 +11,18 @@
     "visual_from": "HF",
     "visual_to": "Ae",
     "visual_caption": "FROM THE WEB. INTO YOUR TIMELINE."
+  },
+  {
+    "slug": "real-sfx",
+    "name": "Real SFX",
+    "summary": "Add real sound effects to your motion videos. Claude picks recordings from your library and puts each one on the frame.",
+    "category": "Animation & video",
+    "platform": "Claude Code",
+    "version": "0.14.1",
+    "updated": "2026-10-21",
+    "image": "real-sfx.png",
+    "visual_from": "MP4",
+    "visual_to": "SFX",
+    "visual_caption": "REAL SOUNDS. ON THE FRAME."
   }
 ]

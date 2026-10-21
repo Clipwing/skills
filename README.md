@@ -9,8 +9,9 @@ A collection of reusable AI agent skills from Clipwing. Each skill lives in its 
 | Skill | What it does | Download |
 | --- | --- | --- |
 | [HyperFrames to After Effects](skills/hyperframes-to-after-effects/) | Converts a HyperFrames project into an editable After Effects project with text, shapes, footage, precomps and keyframes, then compares frames against the original render. | [.skill package](packages/hyperframes-to-after-effects.skill) |
+| [Real SFX](skills/real-sfx/) | Sound-designs motion videos with real recorded sound effects from your own library, placed on the exact frame, keeping music and voice. Ships with 78 CC0 UI sounds; bring your own library for the rest. | [.skill package](packages/real-sfx.skill) |
 
-Share this skill: [HyperFrames to After Effects](https://clipwing.pro/skills/hyperframes-to-after-effects/).
+Share these skills: [HyperFrames to After Effects](https://clipwing.pro/skills/hyperframes-to-after-effects/), [Real SFX](https://clipwing.pro/skills/real-sfx/).
 
 ## Install in Claude Code
 
