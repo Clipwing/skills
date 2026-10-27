@@ -1,0 +1,9 @@
+# DaVinci Resolve project (Stas works this way: two-camera sources, proxies, Mac).
+# FOLDER: file types that go there. A folder with RENDER in its name gets versioned renders.
+01_SOURCE: mov mp4 mxf braw r3d mkv avi m4v
+02_AUDIO: wav mp3 aif aiff m4a flac
+03_GRAPHICS: png jpg jpeg gif svg psd ai webp
+04_PROJECT: drp drt drb srt
+05_PROXY:
+06_RENDER:
+07_DELIVERY:

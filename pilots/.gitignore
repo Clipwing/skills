@@ -1,0 +1,3 @@
+*.skill
+*.zip
+__pycache__/

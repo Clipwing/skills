@@ -1,0 +1,7 @@
+# Vadim's layout (team survey, 13.10.2026): Premiere + After Effects, Windows.
+# FOLDER: file types that go there. A folder with RENDER in its name gets versioned renders.
+PR_SAVE: prproj
+AE_SAVE: aep aepx
+VID: mp4 mov mkv avi mxf m4v webm
+MAT: wav mp3 aif aiff m4a png jpg jpeg gif svg psd ai webp mogrt srt
+RENDER:
