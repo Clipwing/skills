@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="film-core.js"></script>
+    <script src="kit.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/geist-latin.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist-mono-latin.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Newsreader"; src: url("assets/fonts/newsreader-600.woff2") format("woff2"); font-weight: 600; }
+      :root {
+        --brand: #6366f1; --ink: #0a0a0a; --scene-accent: #4f46e5;
+        --mono: "Geist Mono", monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #fff; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "Geist", sans-serif; color: var(--ink); }
+      #grounds, .ground-layer { position: absolute; inset: 0; }
+      .scene { position: absolute; inset: 0; z-index: 3; }
+      .kick, #corner { position: absolute; top: 56px; font-family: var(--mono); font-size: 26px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(10, 10, 10, 0.6); z-index: 6; }
+      .kick { left: 72px; }
+      .on-dark .kick, .on-dark .title { color: #fff; }
+
+      /* Headline: two lines, left; the accent word is a serif in the scene's accent colour (never italic). */
+      .title { position: absolute; left: 140px; top: 360px; width: 900px; font-weight: 600; font-size: 118px; line-height: 1.02; letter-spacing: -0.035em; }
+      .ln { display: block; }
+      .w { display: inline-block; margin-right: 0.2em; }
+      mark { background: none; color: var(--scene-accent); font-family: "Newsreader", serif; font-weight: 600; font-size: 1.1em; letter-spacing: -0.01em; display: inline-block; }
+
+      /* The phone lives through the middle scenes; its screen changes. */
+      .phone { position: absolute; left: 1180px; top: 90px; width: 470px; height: 900px; border-radius: 64px; background: #111; padding: 16px; box-shadow: 0 30px 70px rgba(30, 30, 60, 0.22); z-index: 4; }
+      .screen { position: relative; width: 100%; height: 100%; border-radius: 50px; background: #fff; overflow: hidden; }
+      .screen .bar { height: 92px; display: flex; align-items: end; padding: 0 34px 14px; font-size: 30px; font-weight: 600; }
+      .rowt { display: flex; height: 112px; margin: 0 22px 10px; border-radius: 14px; background: #f3f3f7; }
+      .rowt b { border-radius: 14px 0 0 14px; width: 92px; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 800; color: #111; }
+      .slot { flex: 1; display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+      .tile { height: 84px; padding: 0 14px; border-radius: 12px; display: flex; align-items: center; font-size: 26px; font-weight: 700; color: #fff; white-space: nowrap; }
+      .pool { position: absolute; left: 22px; right: 22px; bottom: 30px; height: 220px; border: 3px dashed #d7d7e4; border-radius: 18px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px; padding: 16px; }
+      .field { margin: 16px 22px; height: 72px; border-radius: 14px; background: #f3f3f7; display: flex; align-items: center; padding: 0 22px; font-size: 28px; }
+
+      /* The character: big in the intro, then an avatar in a ring of the scene's accent colour. */
+      .mascot { position: absolute; overflow: visible; }
+      #avatar { position: absolute; left: 60px; top: 870px; width: 150px; height: 150px; border-radius: 50%; background: #fff; border: 5px solid var(--scene-accent); overflow: hidden; z-index: 7; }
+      #avatar svg { position: absolute; left: 13px; top: 18px; width: 120px; height: 132px; }
+      .bubble { position: absolute; padding: 18px 30px; border-radius: 30px; background: #fff; font-size: 44px; font-weight: 600; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15); }
+      .catcard { position: absolute; padding: 18px 30px; border-radius: 18px; font-size: 38px; font-weight: 600; background: #fff; box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18); }
+      .chip { display: inline-flex; padding: 10px 20px; border-radius: 999px; background: #111; color: #fff; font-family: var(--mono); font-size: 26px; }
+      .btn { display: inline-flex; align-items: center; height: 88px; padding: 0 40px; border-radius: 16px; background: var(--brand); color: #fff; font-family: var(--mono); font-size: 32px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="23.3" data-width="1920" data-height="1080">
+      <div id="grounds" class="clip" data-start="0" data-duration="23.3" data-track-index="0"></div>
+
+      <!-- Persistent layers (absolute times): the phone from 4.2 to 16.6, the avatar from 4.4 to 16.6 -->
+      <div class="phone" data-fx="rise" data-t="4.25" data-d="0.7" data-out="16.5" data-outfx="drop">
+        <div class="screen">
+          <div class="bar">Video formats</div>
+          <div class="rowt"><b style="background: #ff7f7f">S</b><div class="slot"><span class="tile" style="background: #6366f1" data-fx="fade@6.3 drag@9.2" data-dx="-86" data-dy="528">Shorts</span><span class="tile" style="background: #ec4899" data-fx="fade@6.7 drag@9.7" data-dx="-84" data-dy="528">Reels</span></div></div>
+          <div class="rowt"><b style="background: #ffbf7f">A</b><div class="slot"><span class="tile" style="background: #7dd3fc; color: #111" data-fx="fade@7.1 drag@10.2" data-dx="104" data-dy="406">Podcasts</span></div></div>
+          <div class="rowt"><b style="background: #ffdf7f">B</b><div class="slot"><span class="tile" style="background: #fcd34d; color: #111" data-fx="fade@7.4 drag@10.7" data-dx="-86" data-dy="378">Vlogs</span></div></div>
+          <div class="rowt"><b style="background: #bfff7f">C</b><div class="slot"><span class="tile" style="background: #86efac; color: #111" data-fx="fade@7.7 drag@11.2" data-dx="24" data-dy="256">Live</span></div></div>
+          <div class="field" data-fx="fade" data-t="4.9" data-out="8.4"><span data-fx="type" data-t="5.2" data-cps="14">Shorts, Reels, Podcasts, Vlogs, Live</span></div>
+          <div class="pool" data-fx="fade" data-t="5.0" data-out="11.6"></div>
+          <!-- The video preview: a play bar runs as the rows light up -->
+          <div style="position: absolute; left: 22px; right: 22px; bottom: 40px; height: 12px; border-radius: 6px; background: #e5e5ee" data-fx="fade" data-t="13.1">
+            <div style="position: absolute; inset: 0; border-radius: 6px; background: var(--brand)" data-fx="fill-x" data-t="13.3" data-d="2.8"></div>
+          </div>
+          <div style="position: absolute; left: 0; right: 0; bottom: 80px; text-align: center" data-fx="pop" data-t="13.6"><span class="chip">1080 × 1920 MP4</span></div>
+        </div>
+      </div>
+      <div id="avatar" data-fx="pop" data-t="4.5" data-out="16.5">
+        <svg viewBox="0 0 200 220"><use href="#guy" /></svg>
+      </div>
+
+      <!-- 0 · intro: bright ground, the character big, categories falling around -->
+      <section class="scene on-dark" id="s0" data-at="0" data-len="4.2" data-bg="#6366f1" data-accent="#ffffff">
+        <svg class="mascot" id="big" viewBox="0 0 200 220" style="left: 220px; top: 250px; width: 520px; height: 572px" data-fx="pop@0 wave@0.9 blink@2.4 tocorner@3.7" data-to="-200,560,0.25">
+          <defs>
+            <g id="guy">
+              <ellipse cx="78" cy="206" rx="22" ry="10" fill="#3730a3" /><ellipse cx="122" cy="206" rx="22" ry="10" fill="#3730a3" />
+              <rect x="22" y="112" width="26" height="58" rx="13" fill="#4338ca" transform="rotate(18 35 120)" />
+              <path d="M100 18 C 118 2, 140 8, 138 30 C 126 22, 112 24, 100 34 Z" fill="#a5b4fc" />
+              <rect x="40" y="30" width="120" height="176" rx="60" fill="#6366f1" stroke="#3730a3" stroke-width="4" />
+              <ellipse cx="100" cy="150" rx="40" ry="36" fill="#c7d2fe" />
+              <g class="eye"><ellipse cx="80" cy="92" rx="15" ry="17" fill="#fff" /><circle cx="84" cy="96" r="7" fill="#111" /></g>
+              <g class="eye"><ellipse cx="120" cy="92" rx="15" ry="17" fill="#fff" /><circle cx="124" cy="96" r="7" fill="#111" /></g>
+              <circle cx="64" cy="122" r="8" fill="#f9a8d4" opacity="0.85" /><circle cx="136" cy="122" r="8" fill="#f9a8d4" opacity="0.85" />
+              <path d="M88 124 Q100 136 112 124" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" />
+            </g>
+          </defs>
+          <use href="#guy" />
+          <rect class="arm" data-origin="160 128" x="150" y="70" width="26" height="62" rx="13" fill="#4338ca" />
+        </svg>
+        <div class="bubble" style="left: 640px; top: 210px" data-fx="pop" data-t="0.6" data-out="3.6">psst…</div>
+        <h1 class="title" style="left: 1000px; top: 380px; width: 820px; color: #fff" data-fx="words" data-t="1.0"><span class="ln">Rank</span><span class="ln"><mark>anything</mark></span></h1>
+        <div class="catcard" style="--r: -8deg; left: 1060px; top: 700px" data-fx="fall" data-t="1.6">AI tools</div>
+        <div class="catcard" style="--r: 6deg; left: 1330px; top: 760px" data-fx="fall" data-t="1.8">Games</div>
+        <div class="catcard" style="--r: -4deg; left: 1560px; top: 690px" data-fx="fall" data-t="2.0">Snacks</div>
+      </section>
+
+      <!-- 1 · add items -->
+      <section class="scene" id="s1" data-at="4.2" data-len="4.4" data-bg="#d3e1fc" data-accent="#1d4ed8">
+        <div class="kick">// 01 · add</div>
+        <h2 class="title" data-fx="words" data-t="0.4"><span class="ln">Add what</span><span class="ln">you <mark>rank</mark></span></h2>
+      </section>
+
+      <!-- 2 · rank -->
+      <section class="scene" id="s2" data-at="8.6" data-len="4.2" data-bg="#dcdef9" data-accent="#6d28d9">
+        <div class="kick">// 02 · rank</div>
+        <h2 class="title" data-fx="words" data-t="0.3"><span class="ln">Drag it into</span><span class="ln">a <mark>tier</mark></span></h2>
+      </section>
+
+      <!-- 3 · the video -->
+      <section class="scene" id="s3" data-at="12.8" data-len="3.8" data-bg="#f2d4e0" data-accent="#be185d">
+        <div class="kick">// 03 · export</div>
+        <h2 class="title" data-fx="words" data-t="0.3"><span class="ln">Get it as</span><span class="ln">a <mark>video</mark></span></h2>
+      </section>
+
+      <!-- 4 · dark line -->
+      <section class="scene on-dark" id="s4" data-at="16.6" data-len="3.3" data-bg="#0a0a0a" data-accent="#a5b4fc">
+        <h2 class="title" style="left: 0; right: 0; width: auto; top: 420px; text-align: center; font-size: 104px" data-fx="words" data-t="0.25">You rank. We make the <mark>video</mark></h2>
+      </section>
+
+      <!-- 5 · end card -->
+      <section class="scene" id="s5" data-at="19.9" data-len="3.4" data-bg="#ffffff" data-accent="#6366f1">
+        <img src="assets/logo-dark.svg" alt="Clipwing" style="position: absolute; left: 700px; top: 280px; width: 520px" data-fx="rise" data-t="0.2" />
+        <h2 class="title" style="left: 0; right: 0; width: auto; top: 480px; text-align: center; font-size: 84px" data-fx="words" data-t="0.4">Free tier list <mark>video</mark> maker</h2>
+        <div style="position: absolute; left: 0; right: 0; top: 650px; text-align: center" data-fx="rise" data-t="0.9"><span class="btn">clipwing.pro/tierlist-generator</span></div>
+        <div style="position: absolute; left: 0; right: 0; top: 790px; text-align: center; font-family: var(--mono); font-size: 28px; color: rgba(10,10,10,0.6)" data-fx="fade" data-t="1.1">1080 × 1920 MP4 · for TikTok, Reels and Shorts</div>
+      </section>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = MascotPastel.build();
+    </script>
+  </body>
+</html>

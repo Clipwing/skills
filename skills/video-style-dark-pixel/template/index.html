@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="film-core.js"></script>
+    <script src="kit.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/geist-latin.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist-mono-latin.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Silkscreen"; src: url("assets/fonts/silkscreen-latin.woff2") format("woff2"); }
+      :root {
+        /* One accent only: swap --accent for the brand colour. Everything else stays grey and white. */
+        --accent: #6366f1;
+        --bg: #0a0a0a; --panel: #161616; --line: #262626; --text: #f5f5f5; --dim: #9a9a9a; --ok: #3ddc84;
+        --mono: "Geist Mono", monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: "Geist", sans-serif; color: var(--text); }
+      .scene { position: absolute; inset: 0; background: var(--bg); }
+      .stage { position: absolute; inset: 0; }
+      .kick { position: absolute; left: 96px; top: 72px; font-family: var(--mono); font-size: 26px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+
+      /* Headline: centred, Geist 700, 1-2 lines; accent words take the accent colour. */
+      .title { position: absolute; left: 0; right: 0; text-align: center; font-weight: 700; font-size: 100px; line-height: 1.1; letter-spacing: -0.03em; }
+      .ln { display: block; }
+      .w { display: inline-block; margin: 0 0.12em; }
+      .title .w { margin: 0 0.1em; }
+      mark { background: none; color: var(--accent); }
+      /* Service logos sit in the line at the height of a lower-case letter, on the baseline. */
+      .ico { height: 0.72em; width: auto; vertical-align: -0.04em; margin-right: 0.12em; }
+      .sub { position: absolute; left: 0; right: 0; text-align: center; font-family: var(--mono); font-size: 30px; color: var(--dim); }
+
+      svg.pixel { position: absolute; overflow: visible; shape-rendering: crispEdges; }
+
+      /* Browser window: dark, three dots, address bar, radius 12. */
+      .win { position: absolute; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+      .win .bar { height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 24px; border-bottom: 1px solid var(--line); }
+      .win .bar i { width: 14px; height: 14px; border-radius: 50%; background: #333; }
+      .win .url { margin-left: 24px; flex: 1; height: 40px; border-radius: 8px; background: #0f0f0f; display: flex; align-items: center; padding: 0 18px; font-family: var(--mono); font-size: 26px; color: var(--dim); }
+      .steps { position: absolute; left: 48px; top: 120px; width: 380px; font-family: var(--mono); font-size: 28px; line-height: 2.2; color: var(--dim); }
+      .steps div::before { content: "[ ] "; }
+      .steps div.on { color: var(--text); }
+      .steps div.on::before { content: "[x] "; color: var(--ok); }
+      .field { position: absolute; height: 84px; border: 1.5px solid #3a3a3a; border-radius: 10px; background: #0f0f0f; display: flex; align-items: center; padding: 0 24px; font-family: var(--mono); font-size: 30px; }
+      .btn { position: absolute; height: 84px; padding: 0 34px; border-radius: 10px; background: var(--accent); color: #fff; display: flex; align-items: center; font-size: 30px; font-weight: 600; }
+      .blocks { position: absolute; display: flex; gap: 6px; height: 22px; }
+      .blocks i { flex: 1; background: #242424; }
+      .blocks i.on { background: var(--accent); }
+      .chap { position: absolute; left: 0; right: 0; display: flex; gap: 28px; font-size: 34px; font-weight: 500; }
+      .chap b { font-family: var(--mono); font-weight: 500; color: var(--accent); width: 110px; }
+      .cursor { position: absolute; left: 0; top: 0; width: 40px; height: 40px; z-index: 20; }
+      .cam { position: absolute; inset: 0; }
+
+      /* The pixel shutter between sections. */
+      #shutter { position: absolute; inset: 0; z-index: 50; pointer-events: none; }
+      #shutter i { display: block; height: calc(100% / 12); background: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="23.8" data-width="1920" data-height="1080">
+      <div id="ground" class="clip" data-start="0" data-duration="23.8" data-track-index="0" style="position: absolute; inset: 0; background: var(--bg)"></div>
+
+      <!-- 0 · hook: one line, the mascot builds itself -->
+      <section class="scene" id="s0" data-at="0" data-len="3.8" data-push="1.04">
+        <div class="stage">
+          <div class="kick">// youtube chapters</div>
+          <h1 class="title" style="top: 380px" data-fx="words" data-t="0.5"><span class="ln">Your long video</span><span class="ln">needs <mark>chapters</mark></span></h1>
+        </div>
+        <svg class="pixel" data-grid="wing" style="left: 1640px; top: 820px; width: 168px; height: 168px" data-fx="assemble@0.05 hop@1.9 blink@2.8"></svg>
+      </section>
+
+      <!-- 1 · meet: the product name -->
+      <section class="scene" id="s1" data-at="3.8" data-len="3.4">
+        <div class="kick">// 01 · meet</div>
+        <img src="assets/logo-light.svg" alt="Clipwing" style="position: absolute; left: 730px; top: 280px; width: 460px" data-fx="blur" data-t="0.1" />
+        <h2 class="title" style="top: 450px" data-fx="words" data-t="0.35"><mark>Timestamps</mark> Generator</h2>
+        <div class="sub" style="top: 620px" data-fx="fade" data-t="1.0">free · any language</div>
+        <svg class="pixel" data-grid="wing" style="left: 1640px; top: 820px; width: 168px; height: 168px" data-fx="hop@0.9 blink@2.2"></svg>
+      </section>
+
+      <!-- 2 · the product working: paste a link, get chapters -->
+      <section class="scene" id="s2" data-at="7.2" data-len="6.2" data-in="shutter">
+        <div class="cam" data-cam='[[0.7,1.45,1190,340,0.8],[2.9,1.3,1060,690,0.8],[5.3,1,960,540,0.6]]'>
+          <div class="win" style="left: 210px; top: 150px; width: 1500px; height: 800px" data-fx="open" data-t="0.05">
+            <div class="bar"><i></i><i></i><i></i><div class="url">clipwing.pro/youtube-timestamps-generator</div></div>
+            <div class="steps">
+              <div data-fx="state" data-t="1.9">paste link</div>
+              <div data-fx="state" data-t="3.4">listen</div>
+              <div data-fx="state" data-t="4.2">chapters</div>
+            </div>
+            <div class="field" style="left: 470px; top: 140px; width: 700px"><span data-fx="type" data-t="0.9" data-cps="34">youtube.com/watch?v=ep12</span></div>
+            <div class="btn" style="left: 1190px; top: 140px" data-fx="press" data-t="2.0">Get timestamps</div>
+            <div class="blocks" data-n="16" style="left: 470px; top: 262px; width: 980px" data-fx="blocks" data-t="2.1" data-d="1.4"></div>
+            <div style="position: absolute; left: 470px; top: 330px; width: 980px; height: 420px">
+              <div class="chap" style="top: 0" data-fx="rise" data-t="3.5"><b>0:00</b>Intro</div>
+              <div class="chap" style="top: 84px" data-fx="rise" data-t="3.7"><b>1:42</b>Why pauses hurt</div>
+              <div class="chap" style="top: 168px" data-fx="rise" data-t="3.9"><b>4:10</b>Cutting the fillers</div>
+              <div class="chap" style="top: 252px" data-fx="rise" data-t="4.1"><b>7:55</b>Export and post</div>
+              <div style="position: absolute; top: 350px; font-family: var(--mono); font-size: 24px; color: var(--dim)" data-fx="fade" data-t="4.4">sample video · chapters made by the tool</div>
+            </div>
+          </div>
+          <svg class="cursor" viewBox="0 0 40 40" data-path='[[0.6,1500,900],[1.95,1420,330,"click"],[3.2,1300,700]]'><path d="M4 2 L4 32 L12 24 L18 37 L23 35 L17 22 L28 22 Z" fill="#f5f5f5" stroke="#0a0a0a" stroke-width="2.5" stroke-linejoin="round" /></svg>
+        </div>
+      </section>
+
+      <!-- 3 · where it goes: YouTube turns the list into chapters -->
+      <section class="scene" id="s3" data-at="13.4" data-len="4" data-push="1.03">
+        <div class="stage">
+          <div class="kick">// 03 · copy</div>
+          <h2 class="title" style="top: 200px; font-size: 92px" data-fx="words" data-t="0.2">Paste it into <img class="ico" src="assets/youtube.svg" alt="" />YouTube</h2>
+          <div style="position: absolute; left: 360px; top: 470px; width: 1200px; height: 26px; display: flex; gap: 8px">
+            <i style="flex: 102; background: var(--accent)" data-fx="fill-x" data-t="1.3" data-d="0.35"></i>
+            <i style="flex: 148; background: var(--accent)" data-fx="fill-x" data-t="1.6" data-d="0.35"></i>
+            <i style="flex: 225; background: var(--accent)" data-fx="fill-x" data-t="1.9" data-d="0.35"></i>
+            <i style="flex: 180; background: var(--accent)" data-fx="fill-x" data-t="2.2" data-d="0.35"></i>
+          </div>
+          <div style="position: absolute; left: 360px; top: 530px; width: 1200px; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 28px; color: var(--dim)" data-fx="fade" data-t="1.4">
+            <span>0:00 Intro</span><span>1:42</span><span>4:10</span><span>7:55</span>
+          </div>
+          <div class="sub" style="top: 690px" data-fx="fade" data-t="1.4">chapters show up on the video</div>
+        </div>
+      </section>
+
+      <!-- 4 · the promise -->
+      <section class="scene" id="s4" data-at="17.4" data-len="3.4" data-push="1.04">
+        <div class="stage">
+          <h2 class="title" style="top: 330px" data-fx="words" data-t="0.15"><span class="ln">Chapters in</span><span class="ln">a <mark>minute</mark></span></h2>
+          <div class="sub" style="top: 640px" data-fx="fade" data-t="0.8">any language · public videos · free</div>
+        </div>
+      </section>
+
+      <!-- 5 · end card -->
+      <section class="scene" id="s5" data-at="20.8" data-len="3" data-in="shutter">
+        <img src="assets/logo-light.svg" alt="Clipwing" style="position: absolute; left: 700px; top: 300px; width: 520px" data-fx="blur" data-t="0.2" />
+        <div class="btn" style="position: relative; left: 0; margin: 520px auto 0; width: max-content; font-family: var(--mono); font-weight: 500" data-fx="rise" data-t="0.6">clipwing.pro/youtube-timestamps-generator</div>
+        <svg class="pixel" data-grid="wing" style="left: 888px; top: 700px; width: 144px; height: 144px" data-fx="assemble@0.4 blink@1.9"></svg>
+      </section>
+
+      <div id="shutter"></div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = DarkPixel.build();
+    </script>
+  </body>
+</html>

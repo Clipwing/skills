@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="film-core.js"></script>
+    <script src="kit.js"></script>
+    <style>
+      @font-face { font-family: "Newsreader"; src: url("assets/fonts/newsreader-400.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Newsreader"; src: url("assets/fonts/newsreader-600.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/geist-latin.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist-mono-latin.woff2") format("woff2"); font-weight: 100 900; }
+      :root {
+        --paper: #f1f2ee; --black: #0c0c0c; --grey: #9a9a96;
+        --accent: #6366f1; /* only on the final button */
+        --serif: "Newsreader", serif; --mono: "Geist Mono", monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--black); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--black); font-family: var(--serif); }
+      .scene { position: absolute; inset: 0; }
+      /* The grid: four panes, 12 px gaps on black. */
+      .pane { position: absolute; width: 942px; height: 522px; overflow: hidden; }
+      .pane[data-cell="0"] { left: 12px; top: 12px; }
+      .pane[data-cell="1"] { left: 966px; top: 12px; }
+      .pane[data-cell="2"] { left: 12px; top: 546px; }
+      .pane[data-cell="3"] { left: 966px; top: 546px; }
+      .pane[data-cell="full"] { left: 12px; top: 12px; width: 1896px; height: 1056px; }
+      .light { background: var(--paper); color: var(--black); }
+      .dark { background: var(--black); color: var(--paper); border: 1px solid #1e1e1e; }
+      .phrase { position: absolute; left: 64px; right: 64px; top: 50%; transform: translateY(-50%); font-size: 66px; line-height: 1.12; letter-spacing: -0.01em; }
+      .phrase .w { margin-right: 0.22em; }
+      .phrase b { font-weight: 600; }
+      .pic { display: inline-block; width: 0.8em; height: 0.8em; vertical-align: -0.08em; }
+      .mono { font-family: var(--mono); font-size: 28px; letter-spacing: 0.02em; }
+      .tag { position: absolute; left: 32px; top: 26px; font-family: var(--mono); font-size: 28px; color: var(--grey); }
+      .mosaic { position: absolute; inset: 0; }
+      .mosaic i { position: absolute; display: block; }
+      .list { position: absolute; left: 0; right: 0; top: 40px; }
+      .list div { height: 92px; display: flex; align-items: center; padding-left: 64px; font-size: 52px; border-bottom: 1px solid rgba(12, 12, 12, 0.12); }
+      .list div.hot { background: var(--black); color: var(--paper); }
+      .chip { display: inline-flex; align-items: center; gap: 12px; padding: 16px 30px; border: 2px solid var(--black); border-radius: 999px; font-family: "Geist", sans-serif; font-size: 34px; font-weight: 500; }
+      .chip.on { background: var(--black); color: var(--paper); }
+      .rec { display: inline-flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 30px; }
+      .rec::before { content: ""; width: 18px; height: 18px; border-radius: 50%; background: #e5484d; }
+      .frame { position: absolute; border: 2px solid currentColor; border-radius: 18px; overflow: hidden; }
+      .person { position: absolute; left: 50%; bottom: 0; width: 46%; height: 82%; transform: translateX(-50%); background: radial-gradient(circle at 50% 24%, currentColor 0 18%, transparent 18.5%), radial-gradient(ellipse at 50% 100%, currentColor 0 50%, transparent 50.5%); opacity: 0.9; }
+      .btn { display: inline-flex; align-items: center; height: 88px; padding: 0 40px; border-radius: 14px; background: var(--accent); color: #fff; font-family: var(--mono); font-size: 32px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="19.4" data-width="1920" data-height="1080">
+      <div id="ground" class="clip" data-start="0" data-duration="19.4" data-track-index="0" style="position: absolute; inset: 0; background: var(--black)"></div>
+
+      <!-- 0 · the question -->
+      <section class="scene" id="s0" data-at="0" data-len="3.8">
+        <div class="pane light" data-cell="0">
+          <p class="phrase" data-fx="words" data-t="0.7">Need to record <svg class="pic" viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2" fill="none" stroke="#0c0c0c" stroke-width="2" /><path d="M16 10l6-3v10l-6-3z" fill="none" stroke="#0c0c0c" stroke-width="2" /></svg> yourself</p>
+          <div class="mosaic" data-cols="16" data-rows="9" data-fx="mosaic" data-t="0" data-d="1.0"></div>
+        </div>
+        <div class="pane dark" data-cell="1">
+          <svg width="942" height="522" viewBox="0 0 942 522" style="position: absolute; inset: 0">
+            <path d="M80 400 H340 V180 H620 V320 H860" fill="none" stroke="#f1f2ee" stroke-width="2" data-fx="draw" data-t="0.3" data-d="1.6" />
+            <path d="M80 140 H260 V300 H480" fill="none" stroke="#f1f2ee" stroke-opacity="0.5" stroke-width="2" data-fx="draw" data-t="0.8" data-d="1.4" />
+            <circle cx="340" cy="400" r="9" fill="#f1f2ee" data-fx="pop" data-t="1.0" /><circle cx="620" cy="180" r="9" fill="#f1f2ee" data-fx="pop" data-t="1.4" /><circle cx="860" cy="320" r="9" fill="#f1f2ee" data-fx="pop" data-t="1.9" />
+          </svg>
+          <div class="tag" style="color: #8a8a86">webcam · screen · both</div>
+        </div>
+        <div class="pane light" data-cell="2">
+          <div class="list" data-fx="scroll" data-t="0" data-speed="40">
+            <div>a tutorial</div><div>a sales pitch</div><div class="hot">a lesson</div><div>a reaction</div><div>a product demo</div><div>a hello to the team</div><div>an update</div>
+          </div>
+        </div>
+        <div class="pane dark" data-cell="3">
+          <div class="frame" style="left: 220px; top: 60px; width: 500px; height: 380px; color: #f1f2ee"><div class="person"></div></div>
+          <div class="rec" style="position: absolute; left: 236px; top: 76px" data-fx="fade" data-t="1.2">REC</div>
+        </div>
+      </section>
+
+      <!-- 1 · camera, screen or both -->
+      <section class="scene" id="s1" data-at="3.8" data-len="4.2">
+        <div class="pane dark" data-cell="0"><p class="phrase" data-fx="words" data-t="0.4">Camera, screen or <b>both</b></p></div>
+        <div class="pane light" data-cell="1">
+          <div class="frame" style="left: 140px; top: 70px; width: 660px; height: 390px; color: #0c0c0c">
+            <div style="position: absolute; left: 30px; top: 40px; width: 300px; height: 18px; background: #0c0c0c; opacity: 0.8"></div>
+            <div style="position: absolute; left: 30px; top: 90px; width: 420px; height: 12px; background: #0c0c0c; opacity: 0.25"></div>
+            <div style="position: absolute; left: 30px; top: 120px; width: 380px; height: 12px; background: #0c0c0c; opacity: 0.25"></div>
+            <div style="position: absolute; left: 30px; top: 150px; width: 400px; height: 12px; background: #0c0c0c; opacity: 0.25"></div>
+          </div>
+          <div style="position: absolute; left: 600px; top: 290px; width: 190px; height: 190px; border-radius: 50%; background: #0c0c0c; color: #f1f2ee; overflow: hidden" data-fx="pop" data-t="1.4"><div class="person"></div></div>
+        </div>
+        <div class="pane light" data-cell="2">
+          <div style="position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); display: flex; justify-content: center; gap: 24px">
+            <span class="chip" data-fx="state" data-t="0.9">Camera</span><span class="chip" data-fx="state" data-t="1.5">Screen</span>
+          </div>
+        </div>
+        <div class="pane light" data-cell="3">
+          <div data-fx="countdown" data-t="1.2" data-every="0.7" style="position: absolute; inset: 0">
+            <div style="position: absolute; left: 0; right: 0; top: 40px; text-align: center; font-size: 300px; line-height: 1">3</div>
+            <div style="position: absolute; left: 0; right: 0; top: 40px; text-align: center; font-size: 300px; line-height: 1">2</div>
+            <div style="position: absolute; left: 0; right: 0; top: 40px; text-align: center; font-size: 300px; line-height: 1">1</div>
+            <div style="position: absolute; left: 0; right: 0; top: 160px; text-align: center"><span class="rec">REC</span></div>
+          </div>
+          <div class="mono" style="position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; color: #6f6f6b">a 3-second countdown first</div>
+        </div>
+      </section>
+
+      <!-- 2 · pause any time -->
+      <section class="scene" id="s2" data-at="8" data-len="4.2">
+        <div class="pane light" data-cell="0"><p class="phrase" data-fx="words" data-t="0.4">Pause whenever you <b>like</b></p></div>
+        <div class="pane dark" data-cell="1">
+          <div style="position: absolute; left: 0; right: 0; top: 120px; text-align: center; font-size: 200px; line-height: 1; font-feature-settings: 'tnum'" data-fx="count" data-from="0" data-to="42" data-fmt="time" data-t="0.3" data-d="3.4">0:42</div>
+          <div style="position: absolute; left: 0; right: 0; top: 380px; text-align: center"><span class="rec" style="color: #f1f2ee">REC · sample</span></div>
+        </div>
+        <div class="pane dark" data-cell="2">
+          <div style="position: absolute; left: 80px; right: 80px; top: 210px; height: 90px; display: flex; gap: 10px">
+            <i style="flex: 3; background: #f1f2ee"></i>
+            <i style="flex: 2; background: repeating-linear-gradient(45deg, #2a2a2a 0 12px, #444 12px 24px)" data-out="1.8" data-outfx="drop"></i>
+            <i style="flex: 4; background: #f1f2ee"></i>
+          </div>
+          <div class="mono" style="position: absolute; left: 0; right: 0; top: 360px; text-align: center; color: #b5b5b0" data-fx="fade" data-t="1.9">pauses are left out</div>
+        </div>
+        <div class="pane light" data-cell="3">
+          <div style="position: absolute; left: 371px; top: 141px; width: 200px; height: 200px; border-radius: 50%; border: 3px solid #0c0c0c; display: flex; align-items: center; justify-content: center; gap: 22px" data-fx="press" data-t="1.4">
+            <i style="width: 24px; height: 84px; background: #0c0c0c"></i><i style="width: 24px; height: 84px; background: #0c0c0c"></i>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 · what next -->
+      <section class="scene" id="s3" data-at="12.2" data-len="3.8">
+        <div class="pane dark" data-cell="0"><p class="phrase" data-fx="words" data-t="0.4">Download or keep <b>editing</b></p></div>
+        <div class="pane light" data-cell="1">
+          <div class="list" style="top: 100px" data-fx="rise" data-each="0.2" data-t="0.8">
+            <div>→ gap remover</div><div>→ subtitles generator</div><div>→ clip cutter</div>
+          </div>
+        </div>
+        <div class="pane light" data-cell="2">
+          <svg width="942" height="522" viewBox="0 0 942 522" style="position: absolute; inset: 0">
+            <path d="M471 110 V330 M391 250 L471 330 L551 250" fill="none" stroke="#0c0c0c" stroke-width="10" stroke-linecap="square" data-fx="draw" data-t="0.6" data-d="0.8" />
+            <path d="M321 400 H621" fill="none" stroke="#0c0c0c" stroke-width="10" data-fx="draw" data-t="1.2" data-d="0.4" />
+          </svg>
+        </div>
+        <div class="pane dark" data-cell="3">
+          <div style="position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; font-size: 54px; line-height: 1.35" data-fx="words" data-words="ink" data-t="0.9">nothing uploaded<br />no watermark<br />no sign-up</div>
+        </div>
+      </section>
+
+      <!-- 4 · end: one pane over the whole frame -->
+      <section class="scene" id="s4" data-at="16" data-len="3.4">
+        <div class="pane light" data-cell="full">
+          <img src="assets/logo-dark.svg" alt="Clipwing" style="position: absolute; left: 688px; top: 250px; width: 520px" data-fx="fade" data-t="0.4" />
+          <p style="position: absolute; left: 0; right: 0; top: 470px; text-align: center; font-size: 76px" data-fx="words" data-t="0.6">Free webcam and screen recorder</p>
+          <div style="position: absolute; left: 0; right: 0; top: 640px; text-align: center" data-fx="fade" data-t="1.1"><span class="btn">clipwing.pro/webcam-recorder</span></div>
+        </div>
+      </section>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = MonoGrid.build();
+    </script>
+  </body>
+</html>

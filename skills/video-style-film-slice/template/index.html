@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="film-core.js"></script>
+    <script src="kit.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/geist-latin.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist-mono-latin.woff2") format("woff2"); font-weight: 100 900; }
+      :root {
+        --accent: #6366f1;
+        --bg: #0a0a0a; --panel: #161616; --line: #262626; --text: #f5f5f5; --dim: #9a9a9a;
+        --mono: "Geist Mono", monospace;
+        --pitch: 252px; /* one frame of the strip plus its gap */
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: "Geist", sans-serif; color: var(--text); }
+      .scene { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+      .kick, #tc { position: absolute; top: 64px; font-family: var(--mono); font-size: 26px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); z-index: 6; }
+      .kick { left: 80px; }
+      #tc { right: 80px; }
+      .title { position: absolute; left: 0; right: 0; top: 120px; text-align: center; font-weight: 700; font-size: 88px; line-height: 1.08; letter-spacing: -0.03em; }
+      .w { display: inline-block; margin: 0 0.1em; }
+      mark { background: none; color: var(--accent); }
+
+      /* The strip: a band in perspective. .world holds the perspective, .tilt the fixed angle, .strip moves. */
+      .world { position: absolute; inset: 0; perspective: 1800px; perspective-origin: 50% 40%; z-index: 1; }
+      .tilt { position: absolute; left: 0; top: 760px; width: 100%; transform: rotateX(50deg) rotateZ(-7deg); transform-style: preserve-3d; }
+      .strip { position: relative; left: -400px; width: calc(var(--pitch) * 24); height: 214px; background: var(--panel); border-top: 2px solid var(--line); border-bottom: 2px solid var(--line); transform-style: preserve-3d; --dim: 1; }
+      .strip::before, .strip::after { content: ""; position: absolute; left: 0; right: 0; height: 12px; background: repeating-linear-gradient(90deg, transparent 0 22px, #000 22px 36px); }
+      .strip::before { top: 8px; } .strip::after { bottom: 8px; }
+      .fr { position: absolute; top: 40px; left: calc(var(--i) * var(--pitch) + 8px); width: 236px; height: 133px; opacity: var(--dim); overflow: visible; }
+      .fr.keep, .seg .fr { opacity: 1; }
+      /* A speaker silhouette drawn in every frame. */
+      .fr::before { content: ""; position: absolute; left: var(--sx); bottom: 0; width: 34%; height: 78%; transform: translateX(-50%); background: radial-gradient(circle at 50% 24%, rgba(245,245,245,0.92) 0 18%, transparent 18.5%), radial-gradient(ellipse at 50% 100%, rgba(245,245,245,0.92) 0 50%, transparent 50.5%); }
+      .tcl { position: absolute; left: 0; top: -34px; font-family: var(--mono); font-size: 20px; color: var(--dim); }
+      .seg { position: absolute; top: 34px; left: calc(var(--from) * var(--pitch) + 2px); width: calc(var(--len) * var(--pitch) - 4px); height: 145px; border: 6px solid var(--accent); transform-style: preserve-3d; }
+      .seg .fr { top: 0; left: calc(var(--i) * var(--pitch) + 0px); }
+      .seg .tcl { display: none; }
+      .tag { position: absolute; left: -6px; top: -66px; padding: 6px 14px; background: var(--accent); font-family: var(--mono); font-size: 26px; white-space: nowrap; }
+      .handle { position: absolute; top: 20px; width: 14px; height: 174px; background: var(--text); border-radius: 4px; z-index: 3; }
+
+      /* Clip cards: flat, in front of the strip. */
+      .deck { position: absolute; left: 640px; top: 330px; width: 640px; height: 360px; z-index: 3; }
+      .clip-card { position: absolute; inset: 0; border-radius: 16px; overflow: hidden; border: 2px solid #2e2e2e; box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
+      .clip-card .fr { position: absolute; inset: 0; width: auto; height: auto; left: 0; top: 0; opacity: 1; }
+      .clip-card .fr::before { width: 30%; }
+      .clip-card .meta { position: absolute; left: 18px; bottom: 16px; padding: 6px 14px; border-radius: 8px; background: rgba(10,10,10,0.75); font-family: var(--mono); font-size: 26px; }
+      .play { position: absolute; left: 50%; top: 50%; width: 92px; height: 92px; margin: -46px 0 0 -46px; border-radius: 50%; background: rgba(10,10,10,0.6); }
+      .play::after { content: ""; position: absolute; left: 36px; top: 26px; border-left: 30px solid var(--text); border-top: 20px solid transparent; border-bottom: 20px solid transparent; }
+      .btn { display: inline-flex; align-items: center; height: 84px; padding: 0 36px; border-radius: 12px; background: var(--accent); color: #fff; font-family: var(--mono); font-size: 32px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="19.6" data-width="1920" data-height="1080">
+      <div id="ground" class="clip" data-start="0" data-duration="19.6" data-track-index="0" style="position: absolute; inset: 0; background: var(--bg)"></div>
+      <div id="tc" data-rate="9"></div>
+
+      <!-- Persistent layers: absolute times. The strip lives 0.2 s → 14 s. -->
+      <div class="world" data-layout-allow-overflow data-layout-allow-overlap>
+        <div class="tilt">
+          <div class="strip" data-frames="24" data-step="6" data-keep="" data-fx="strip-in" data-t="0.2" data-out="14.2" data-outfx="drop" data-drift="900" data-layout-allow-overflow>
+            <div class="seg" id="seg-a" style="--from: 5; --len: 3" data-fx="select@4.3 lift@8.0"><span class="tag">0:30 – 0:48</span></div>
+            <div class="seg" id="seg-b" style="--from: 8; --len: 2" data-fx="select@11.9 lift@12.7"><span class="tag">0:48 – 1:00</span></div>
+            <div class="seg" id="seg-c" style="--from: 10; --len: 3" data-fx="select@12.15 lift@12.95"><span class="tag">1:00 – 1:18</span></div>
+            <div class="handle" style="left: calc(5 * var(--pitch) - 6px)" data-fx="handle" data-t="3.9" data-out="7.9"></div>
+            <div class="handle" data-side="end" style="left: calc(8 * var(--pitch) - 8px)" data-fx="handle" data-t="4.0" data-out="7.9"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="deck" data-out="15.6" data-outfx="up" data-layout-allow-overlap>
+        <div data-fx="fan" data-t="13.7" data-spread="6,360" style="position: absolute; inset: 0">
+          <div class="clip-card" data-fx="land" data-t="13.05"><div class="fr" style="background: linear-gradient(140deg, hsl(18 45% 22%), hsl(18 60% 48%)); --sx: 44%"></div><div class="play"></div><div class="meta">clip-2.mp4 · 0:12</div></div>
+          <div class="clip-card" style="z-index: 2" data-fx="land" data-t="8.25"><div class="fr" style="background: linear-gradient(150deg, hsl(200 45% 22%), hsl(200 60% 48%)); --sx: 50%"></div><div class="play"></div><div class="meta">clip-1.mp4 · 0:18</div></div>
+          <div class="clip-card" data-fx="land" data-t="13.3"><div class="fr" style="background: linear-gradient(130deg, hsl(160 45% 22%), hsl(160 60% 48%)); --sx: 56%"></div><div class="play"></div><div class="meta">clip-3.mp4 · 0:18</div></div>
+        </div>
+      </div>
+
+      <!-- Scenes carry the titles; the layers above carry the motion. -->
+      <section class="scene" id="s0" data-at="0" data-len="3.6">
+        <div class="kick">// 2:24 of raw footage · sample</div>
+        <h1 class="title" data-fx="words" data-t="0.6">One long <mark>video</mark></h1>
+      </section>
+      <section class="scene" id="s1" data-at="3.6" data-len="4">
+        <h2 class="title" data-fx="words" data-t="0.2">Pick the <mark>start and end</mark></h2>
+      </section>
+      <section class="scene" id="s2" data-at="7.6" data-len="4">
+        <h2 class="title" data-fx="words" data-t="0.2">Your clip is ready in <mark>seconds</mark></h2>
+      </section>
+      <section class="scene" id="s3" data-at="11.6" data-len="4">
+        <h2 class="title" data-fx="words" data-t="0.2">Cut <mark>as many</mark> as you like</h2>
+      </section>
+      <section class="scene" id="s4" data-at="15.6" data-len="4">
+        <img src="assets/logo-light.svg" alt="Clipwing" style="position: absolute; left: 700px; top: 280px; width: 520px" data-fx="blur" data-t="0.3" />
+        <h2 class="title" style="top: 480px; font-size: 76px" data-fx="words" data-t="0.5">Free video <mark>clip cutter</mark></h2>
+        <div style="position: absolute; left: 0; right: 0; top: 640px; text-align: center" data-fx="rise" data-t="1.0"><span class="btn">clipwing.pro/clip-cutter</span></div>
+        <div style="position: absolute; left: 0; right: 0; top: 790px; text-align: center; font-family: var(--mono); font-size: 28px; color: var(--dim)" data-fx="fade" data-t="1.4">no upload · no watermark · up to 2 GB</div>
+      </section>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = FilmSlice.build();
+    </script>
+  </body>
+</html>

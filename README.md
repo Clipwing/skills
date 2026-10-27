@@ -13,6 +13,25 @@ A collection of reusable AI agent skills from Clipwing. Each skill lives in its 
 
 Share these skills: [HyperFrames to After Effects](https://clipwing.pro/skills/hyperframes-to-after-effects/), [Real SFX](https://clipwing.pro/skills/real-sfx/).
 
+### Video styles
+
+Ten skills that make videos with Claude in ten styles. Each one ships a finished example film as its template, the team's video rules and a check that runs them before the render. They render with [HyperFrames](https://hyperframes.heygen.com). See them all at [clipwing.pro/skills/video-styles](https://clipwing.pro/skills/video-styles) or download [all ten at once](packages/video-styles.zip).
+
+| Style | What it makes | Format | Download |
+| --- | --- | --- | --- |
+| [Flat Highlight](skills/video-style-flat-highlight/) | Bright product promos: flat colour scenes, words that jump in, one key word on a brand-colour plate, one UI card per scene. | 16:9 | [.skill](packages/video-style-flat-highlight.skill) |
+| [Dark Pixel](skills/video-style-dark-pixel/) | Dark tech promos with one accent colour, a pixel mascot, a browser where a cursor types and clicks, and pixel-stripe shutters. | 16:9 | [.skill](packages/video-style-dark-pixel.skill) |
+| [Film Slice 3D](skills/video-style-film-slice/) | One 3D metaphor for video tools: a long video as a film strip, a piece lifts off and lands as a finished clip. | 16:9 | [.skill](packages/video-style-film-slice.skill) |
+| [Pixel Captions](skills/video-style-pixel-captions/) | Vertical shorts where the captions are the hero: words light up as they are said, one word on a plate, a pixel scene above. | 9:16 | [.skill](packages/video-style-pixel-captions.skill) |
+| [HUD Dashboard](skills/video-style-hud-dashboard/) | A no-cut control panel: a turning point sphere lights up, counters tick, a log grows. A system at work in 20 seconds. | 16:9 or 4:5 | [.skill](packages/video-style-hud-dashboard.skill) |
+| [Card Carousel 3D](skills/video-style-card-carousel/) | Many cards in 3D layouts that flow into each other: a turning ring, an arc, a focus, a fan. For galleries and catalogues. | 16:9 | [.skill](packages/video-style-card-carousel.skill) |
+| [Mono Grid](skills/video-style-mono-grid/) | A black-and-white editorial film in four panels. Each panel has its own rhythm, and the panels change one by one. | 16:9 | [.skill](packages/video-style-mono-grid.skill) |
+| [Paper Collage](skills/video-style-paper-collage/) | Explainers that look made by hand: torn paper on dark cardboard, cut-out words, typewriter labels and a red thread. | 16:9 or 9:16 | [.skill](packages/video-style-paper-collage.skill) |
+| [Mascot Pastel](skills/video-style-mascot-pastel/) | Friendly promos with a character: pastel scenes that flow into each other, a serif accent word, a phone with the live product. | 16:9 or 9:16 | [.skill](packages/video-style-mascot-pastel.skill) |
+| [Split Compare](skills/video-style-split-compare/) | Before and after on one frame: a compare slider, BEFORE and AFTER tags, a frame that reshapes, scene changes by a seam. | 16:9 | [.skill](packages/video-style-split-compare.skill) |
+
+The ten skills share one engine. Edit `shared/video-style-core/` (engine, rule check, references) and `shared/video-styles.json` (names, summaries, demo data), then run `python3 scripts/build_video_styles.py`. It copies the engine and the font licenses into every skill, writes their READMEs, rebuilds the packages and `packages/video-styles.zip`, and updates the catalog entries.
+
 ## Install in Claude Code
 
 Download or clone this repository, then copy the **individual skill folder** from `skills/` into your Claude Code skills directory. Include all files inside the folder, not just `SKILL.md`.

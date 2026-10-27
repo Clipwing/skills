@@ -1,0 +1,192 @@
+[
+  {
+    "slug": "video-style-flat-highlight",
+    "name": "Flat Highlight",
+    "summary": "Bright product promos: flat colour scenes, words that jump in, one key word on a brand-colour plate, one UI card per scene.",
+    "best_for": "SaaS and web tools with a 3–4 step flow",
+    "format": "16:9",
+    "length": "20–35 s",
+    "look": "bright · flat · playful",
+    "fonts": "Inter and JetBrains Mono",
+    "prompt": "Make a 25-second Flat Highlight promo for our tool at example.com/converter. Steps: drop a file, pick a format, download.",
+    "demo": {
+      "tool": "Gap Remover",
+      "url": "/gap-remover",
+      "file": "flat-highlight-gap-remover",
+      "duration": 22.8,
+      "aspect": "16:9",
+      "poster": 9.6
+    }
+  },
+  {
+    "slug": "video-style-dark-pixel",
+    "name": "Dark Pixel",
+    "summary": "Dark tech promos with one accent colour, a pixel mascot, a browser where a cursor types and clicks, and pixel-stripe shutters.",
+    "best_for": "Developer and AI tools that prove themselves on screen",
+    "format": "16:9",
+    "length": "20–50 s",
+    "look": "dark · technical · one accent",
+    "fonts": "Geist, Geist Mono and Silkscreen",
+    "prompt": "Make a Dark Pixel promo for our app at example.com: paste a link, it analyses the page, you get a report.",
+    "demo": {
+      "tool": "YouTube Timestamps Generator",
+      "url": "/youtube-timestamps-generator",
+      "file": "dark-pixel-timestamps",
+      "duration": 23.8,
+      "aspect": "16:9",
+      "poster": 12.9
+    }
+  },
+  {
+    "slug": "video-style-film-slice",
+    "name": "Film Slice 3D",
+    "summary": "One 3D metaphor for video tools: a long video as a film strip, a piece lifts off and lands as a finished clip.",
+    "best_for": "Video cutting, clipping and repurposing tools",
+    "format": "16:9",
+    "length": "15–25 s",
+    "look": "dark · 3D · cinematic",
+    "fonts": "Geist and Geist Mono",
+    "prompt": "Make a Film Slice video for our clipping tool: one long podcast becomes three clips.",
+    "demo": {
+      "tool": "Clip Cutter",
+      "url": "/clip-cutter",
+      "file": "film-slice-clip-cutter",
+      "duration": 19.6,
+      "aspect": "16:9",
+      "poster": 14.6
+    }
+  },
+  {
+    "slug": "video-style-pixel-captions",
+    "name": "Pixel Captions",
+    "summary": "Vertical shorts where the captions are the hero: words light up as they are said, one word on a plate, a pixel scene above.",
+    "best_for": "Reels, Shorts and TikTok, with or without a voiceover",
+    "format": "9:16",
+    "length": "15–70 s",
+    "look": "pastel · captions-first · mascot",
+    "fonts": "Inter and JetBrains Mono",
+    "prompt": "Make a 20-second vertical Pixel Captions short about our new feature, using this voiceover.",
+    "demo": {
+      "tool": "Subtitles Generator",
+      "url": "/subtitles-generator",
+      "file": "pixel-captions-subtitles",
+      "duration": 22.7,
+      "aspect": "9:16",
+      "poster": 10.6
+    }
+  },
+  {
+    "slug": "video-style-hud-dashboard",
+    "name": "HUD Dashboard",
+    "summary": "A no-cut control panel: a turning point sphere lights up, counters tick, a log grows. A system at work in 20 seconds.",
+    "best_for": "Pipelines, batch tools and automations that process many items",
+    "format": "16:9 or 4:5",
+    "length": "15–30 s",
+    "look": "black · monospace · orange",
+    "fonts": "Geist and Geist Mono",
+    "prompt": "Make a HUD Dashboard video showing our tool processing 8 files in a row, ending on our URL.",
+    "demo": {
+      "tool": "SRT Subtitle Translator",
+      "url": "/srt-subtitle-translator",
+      "file": "hud-dashboard-srt-translator",
+      "duration": 20.4,
+      "aspect": "16:9",
+      "poster": 14.6
+    }
+  },
+  {
+    "slug": "video-style-card-carousel",
+    "name": "Card Carousel 3D",
+    "summary": "Many cards in 3D layouts that flow into each other: a turning ring, an arc, a focus, a fan. For galleries and catalogues.",
+    "best_for": "Catalogues, galleries and one-input-many-outputs tools",
+    "format": "16:9",
+    "length": "15–25 s or a 5 s insert",
+    "look": "dark stage · colourful cards · 3D",
+    "fonts": "Geist and Geist Mono",
+    "prompt": "Make a Card Carousel video of our 16 templates, ending with a focus on the most popular one.",
+    "demo": {
+      "tool": "YouTube Thumbnail Downloader",
+      "url": "/youtube-thumbnail-downloader",
+      "file": "card-carousel-thumbnails",
+      "duration": 19.8,
+      "aspect": "16:9",
+      "poster": 2.6
+    }
+  },
+  {
+    "slug": "video-style-mono-grid",
+    "name": "Mono Grid",
+    "summary": "A black-and-white editorial film in four panels. Each panel has its own rhythm, and the panels change one by one.",
+    "best_for": "Calm premium teasers and brand films",
+    "format": "16:9",
+    "length": "15–25 s",
+    "look": "black and white · serif · editorial",
+    "fonts": "Newsreader, Geist and Geist Mono",
+    "prompt": "Make a 20-second Mono Grid teaser for our recorder app, black and white, our colour only on the last button.",
+    "demo": {
+      "tool": "Webcam Recorder",
+      "url": "/webcam-recorder",
+      "file": "mono-grid-webcam-recorder",
+      "duration": 19.4,
+      "aspect": "16:9",
+      "poster": 3.0
+    }
+  },
+  {
+    "slug": "video-style-paper-collage",
+    "name": "Paper Collage",
+    "summary": "Explainers that look made by hand: torn paper on dark cardboard, cut-out words, typewriter labels and a red thread.",
+    "best_for": "Explainers, how-it-works and blog to video",
+    "format": "16:9 or 9:16",
+    "length": "15–50 s",
+    "look": "handmade · Vox-like · textured",
+    "fonts": "Oswald and Special Elite",
+    "prompt": "Make a 30-second Paper Collage explainer of this blog post, with the key number as a big cut-out.",
+    "demo": {
+      "tool": "YouTube Transcript Generator",
+      "url": "/youtube-transcript-generator",
+      "file": "paper-collage-transcript",
+      "duration": 20.4,
+      "aspect": "16:9",
+      "poster": 12.4
+    }
+  },
+  {
+    "slug": "video-style-mascot-pastel",
+    "name": "Mascot Pastel",
+    "summary": "Friendly promos with a character: pastel scenes that flow into each other, a serif accent word, a phone with the live product.",
+    "best_for": "Consumer and creator apps, playful launches",
+    "format": "16:9 or 9:16",
+    "length": "20–45 s",
+    "look": "pastel · friendly · character",
+    "fonts": "Geist, Newsreader and Geist Mono",
+    "prompt": "Make a Mascot Pastel promo for our mobile app with our mascot: sign up, create, share.",
+    "demo": {
+      "tool": "Tier List Generator",
+      "url": "/tierlist-generator",
+      "file": "mascot-pastel-tierlist",
+      "duration": 23.3,
+      "aspect": "16:9",
+      "poster": 2.8
+    }
+  },
+  {
+    "slug": "video-style-split-compare",
+    "name": "Split Compare",
+    "summary": "Before and after on one frame: a compare slider, BEFORE and AFTER tags, a frame that reshapes, scene changes by a seam.",
+    "best_for": "Editing tools, converters, redesigns and v1 vs v2",
+    "format": "16:9",
+    "length": "15–30 s",
+    "look": "light · editorial · before/after",
+    "fonts": "Inter and JetBrains Mono",
+    "prompt": "Make a Split Compare video: our raw interview on the left, the edited version with captions on the right.",
+    "demo": {
+      "tool": "Horizontal to Vertical Converter",
+      "url": "/horizontal-to-vertical-video-converter",
+      "file": "split-compare-vertical",
+      "duration": 20.4,
+      "aspect": "16:9",
+      "poster": 6.8
+    }
+  }
+]

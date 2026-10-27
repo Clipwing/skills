@@ -51,6 +51,7 @@ def build():
     shutil.copytree(ROOT / "site/assets", OUT / "assets")
     (OUT / ".nojekyll").touch()
     cards = []
+    collections = {}
     seen = set()
     for skill in catalog:
         slug = skill["slug"]
@@ -68,24 +69,35 @@ def build():
                     raise ValueError(f"Symlinks are not supported: {path}")
                 if path.is_file():
                     package.write(path, path.relative_to(source.parent))
-        route = f"/{slug}/"
-        body = (ROOT / "site/pages" / f"{slug}.html").read_text()
-        values = {**skill, "download": f"/skills/downloads/{slug}.skill", "source": f"{REPO}/tree/main/skills/{slug}"}
-        for key, value in values.items():
-            body = body.replace("{{" + key + "}}", escape(value))
-        if re.search(r"\{\{[^}]+\}\}", body):
-            raise ValueError(f"Unresolved template placeholder: {slug}")
+        collection = skill.get("collection")
+        if collection:
+            # Skills in a collection share one page on clipwing.pro; their own page only redirects there.
+            route = f"/{collection}/"
+            body = f'<section class="catalog-hero"><span class="eyebrow">{escape(skill["category"])}</span><h1>{escape(skill["name"])}</h1><p>{escape(skill["summary"])}</p><p><a class="button" href="{BASE}/{collection}">See the collection →</a></p></section>'
+        else:
+            route = f"/{slug}/"
+            body = (ROOT / "site/pages" / f"{slug}.html").read_text()
+            values = {**skill, "download": f"/skills/downloads/{slug}.skill", "source": f"{REPO}/tree/main/skills/{slug}"}
+            for key, value in values.items():
+                body = body.replace("{{" + key + "}}", escape(value))
+            if re.search(r"\{\{[^}]+\}\}", body):
+                raise ValueError(f"Unresolved template placeholder: {slug}")
         target = OUT / slug
         target.mkdir()
         (target / "index.html").write_text(page(skill["name"] + " | Clipwing Skills", skill["summary"], route, skill["image"], body))
+        if collection:
+            collections.setdefault(collection, []).append(skill)
+            continue
         visual = f'<span class="app-badge">{escape(skill.get("visual_from", "SKILL"))}</span>'
         if skill.get("visual_to"):
             visual += f'<span class="transfer">→</span><span class="app-badge ae">{escape(skill["visual_to"])}</span>'
         cards.append(f'''<a class="skill-card" href="/skills/{slug}/"><div class="card-art" aria-hidden="true">{visual}<span class="art-caption">{escape(skill.get("visual_caption", skill["category"]))}</span></div><div class="card-body"><span class="eyebrow">{escape(skill['category'])}</span><h2>{escape(skill['name'])} <span aria-hidden="true">↗</span></h2><p>{escape(skill['summary'])}</p><div class="card-bottom"><span>{escape(skill['platform'])}</span><span>Explore skill →</span></div></div></a>''')
+    for name, items in collections.items():
+        cards.append(f'''<a class="skill-card" href="{BASE}/{name}"><div class="card-art" aria-hidden="true"><span class="app-badge">{len(items)}</span><span class="art-caption">{escape(items[0]['category'].upper())}</span></div><div class="card-body"><span class="eyebrow">{escape(items[0]['category'])}</span><h2>Video styles <span aria-hidden="true">↗</span></h2><p>{len(items)} skills, one per style, each with an example film to start from.</p><div class="card-bottom"><span>{escape(items[0]['platform'])}</span><span>Explore the styles →</span></div></div></a>''')
     home = '''<section class="catalog-hero"><div class="eyebrow"><span class="status-dot"></span> THE CLIPWING SKILL LIBRARY</div><h1>Less setup.<br><em>More making.</em></h1><p>Reusable skills for the work you want to get back to.<br>Find a workflow, download it, and make it yours.</p><a class="text-link" href="#catalog">Explore the collection ↓</a><div class="hero-stamp" aria-hidden="true">TOOLS FOR<br>YOUR NEXT<br><strong>GOOD IDEA ↗</strong></div></section><section class="catalog" id="catalog"><div class="section-heading"><h2>The collection</h2><span>''' + f"{len(catalog):02d} skill{'s' if len(catalog) != 1 else ''} / more to come" + '''</span></div><div class="card-grid">''' + "".join(cards) + '''</div></section><section class="how-strip"><span class="eyebrow">FROM DOWNLOAD TO DONE</span><div><h3>01 / Pick your workflow</h3><p>Read what it does and check the requirements.</p></div><div><h3>02 / Add the skill</h3><p>Download the package or copy its folder into Claude Code.</p></div><div><h3>03 / Start making</h3><p>Ask Claude to run the workflow in your project.</p></div></section>'''
     (OUT / "index.html").write_text(page("Clipwing Skills — Less setup. More making.", "Discover and download reusable Clipwing skills for creative workflows. Start with HyperFrames to After Effects.", "/", "catalog.png", home))
     (OUT / "404.html").write_text(page("Page not found | Clipwing Skills", "Find your next workflow in the Clipwing skill catalog.", "/404.html", "catalog.png", '<section class="catalog-hero"><span class="eyebrow">404</span><h1>This page flew away.</h1><p><a class="button" href="/skills/">Back to the catalog →</a></p></section>'))
-    urls = [BASE + "/"] + [BASE + f"/{item['slug']}/" for item in catalog]
+    urls = [BASE + "/"] + [BASE + f"/{item['slug']}/" for item in catalog if not item.get("collection")] + [BASE + f"/{name}" for name in collections]
     (OUT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + ''.join(f"<url><loc>{url}</loc></url>" for url in urls) + '</urlset>')
     print(f"Built {len(catalog)} skill page(s), catalog, social assets and packages in {OUT}")
 

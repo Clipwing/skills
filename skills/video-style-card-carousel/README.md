@@ -1,0 +1,40 @@
+# Card Carousel 3D video style
+
+A Claude Code skill for videos in the Card Carousel 3D style. Many cards in 3D layouts that flow into each other: a turning ring, an arc, a focus, a fan. For galleries and catalogues. Claude writes the film as HTML and [HyperFrames](https://hyperframes.heygen.com) renders it to MP4 on your computer.
+
+![Frames from the example film](example-frames.jpg)
+
+**Best for:** Catalogues, galleries and one-input-many-outputs tools. **Format:** 16:9, 15–25 s or a 5 s insert.
+
+## What you need
+
+- Claude Code.
+- Node.js 18+ and Google Chrome. HyperFrames runs with `npx`, so there's nothing else to install.
+- Your logo as SVG and the facts about your product.
+
+## Install
+
+Copy this folder to `~/.claude/skills/video-style-card-carousel/` (or `.claude/skills/` in a project) and restart Claude Code.
+
+## Use
+
+Ask Claude, for example:
+
+> Make a Card Carousel video of our 16 templates, ending with a focus on the most popular one.
+
+Claude starts from the example film in `template/`, writes your scenes, checks them against the team's video rules (`template/lint-film.mjs`), looks at the frames and renders the MP4.
+
+## What's inside
+
+| Path | What |
+| --- | --- |
+| `SKILL.md` | The style and the workflow Claude follows |
+| `template/` | A finished example film (YouTube Thumbnail Downloader promo, 20 s) to start from: `index.html`, the style kit `kit.js`, the shared engine `film-core.js`, fonts and logos |
+| `template/lint-film.mjs` | Checks the film against the video rules before rendering |
+| `references/` | The video rules and the scene markup reference |
+
+The film comes out silent. Add real sound effects with the [Real SFX](https://clipwing.pro/skills/real-sfx) skill.
+
+Fonts: Geist and Geist Mono, under their open licenses (`template/assets/fonts/LICENSE-*.txt`). The Clipwing logos in `template/assets/` are only there for the example: replace them with your own.
+
+Part of the [Clipwing video styles](https://clipwing.pro/skills/video-styles) collection.

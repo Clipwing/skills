@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="film-core.js"></script>
+    <script src="kit.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/geist-latin.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist-mono-latin.woff2") format("woff2"); font-weight: 100 900; }
+      :root {
+        --accent: #6366f1;
+        --bg: #0b0b0d; --text: #f5f5f5; --dim: #9a9a9a; --panel: #17171b; --line: #2a2a30;
+        --mono: "Geist Mono", monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: radial-gradient(ellipse at 50% 60%, #17171d 0%, var(--bg) 70%); font-family: "Geist", sans-serif; color: var(--text); }
+      .scene { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+      .title { position: absolute; left: 0; right: 0; top: 96px; text-align: center; font-weight: 600; font-size: 84px; letter-spacing: -0.03em; }
+      .title .w { margin: 0 0.1em; }
+      mark { background: none; color: var(--accent); }
+      .ico { height: 0.7em; vertical-align: -0.04em; margin-right: 0.14em; }
+
+      /* The deck: perspective on .world, a fixed tilt on .tilt, the painter places every .card. */
+      .world { position: absolute; inset: 0; perspective: 1700px; perspective-origin: 50% 40%; }
+      .tilt { position: absolute; left: 960px; top: 600px; width: 0; height: 0; transform: rotateX(-15deg); transform-style: preserve-3d; }
+      .deck { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
+      /* A made-up thumbnail: gradient, bold title on a plate, a speaker silhouette, a duration chip. */
+      .card { position: absolute; left: -192px; top: -108px; width: 384px; height: 216px; border-radius: 14px; overflow: hidden; background: linear-gradient(135deg, hsl(var(--h) 55% 24%), hsl(var(--h) 70% 52%)); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5); }
+      .card::before { content: ""; position: absolute; left: var(--sx); bottom: 0; width: 36%; height: 80%; transform: translateX(-50%); background: radial-gradient(circle at 50% 24%, rgba(255,255,255,0.92) 0 18%, transparent 18.5%), radial-gradient(ellipse at 50% 100%, rgba(255,255,255,0.92) 0 50%, transparent 50.5%); }
+      .card b { position: absolute; left: 18px; top: 18px; width: 56%; font-weight: 900; font-size: 34px; line-height: 1; color: #fff; text-shadow: 0 3px 0 rgba(0,0,0,0.55); }
+      .card .len { position: absolute; right: 10px; bottom: 10px; padding: 2px 8px; border-radius: 6px; background: rgba(0,0,0,0.75); font-family: var(--mono); font-size: 18px; }
+
+      .field { position: absolute; left: 470px; top: 900px; width: 760px; height: 84px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--panel); display: flex; align-items: center; padding: 0 26px; font-family: var(--mono); font-size: 32px; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; height: 84px; padding: 0 36px; border-radius: 12px; background: var(--accent); color: #fff; font-size: 32px; font-weight: 600; }
+      .chip { display: inline-flex; padding: 10px 22px; border-radius: 999px; background: var(--panel); border: 1.5px solid var(--line); font-family: var(--mono); font-size: 30px; }
+      .chip.hot { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .cursor { position: absolute; left: 0; top: 0; width: 40px; height: 40px; z-index: 20; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="19.8" data-width="1920" data-height="1080">
+      <div id="ground" class="clip" data-start="0" data-duration="19.8" data-track-index="0" style="position: absolute; inset: 0"></div>
+
+      <!-- The deck lives outside the scenes: absolute times. Steps: [time, layout, focus card]. -->
+      <div class="world" data-layout-allow-overflow data-layout-ignore>
+        <div class="tilt">
+          <div class="deck" data-layouts='[[0,"ring"],[4,"arc",3],[8,"focus",3],[12,"fan",3],[15.7,"out",3]]' data-morph="0.9" data-spin="0.32" data-radius="880">
+          <div class="card" style="--h: 232; --sx: 62%"><b>HOW I EDIT</b><span class="len">12:41</span></div>
+          <div class="card" style="--h: 18; --sx: 69%"><b>MY FIRST VLOG</b><span class="len">8:03</span></div>
+          <div class="card" style="--h: 160; --sx: 76%"><b>5 CAMERA TIPS</b><span class="len">15:20</span></div>
+          <div class="card" style="--h: 330; --sx: 63%"><b>DAY IN TOKYO</b><span class="len">21:07</span></div>
+          <div class="card" style="--h: 48; --sx: 70%"><b>BUDGET SETUP</b><span class="len">9:55</span></div>
+          <div class="card" style="--h: 200; --sx: 77%"><b>I TRIED 30 DAYS</b><span class="len">18:12</span></div>
+          <div class="card" style="--h: 280; --sx: 64%"><b>STUDIO TOUR</b><span class="len">6:48</span></div>
+          <div class="card" style="--h: 0; --sx: 71%"><b>LIGHTING 101</b><span class="len">11:30</span></div>
+          <div class="card" style="--h: 190; --sx: 78%"><b>PODCAST EP 12</b><span class="len">54:16</span></div>
+          <div class="card" style="--h: 300; --sx: 65%"><b>COLOR GRADE</b><span class="len">13:09</span></div>
+          <div class="card" style="--h: 120; --sx: 72%"><b>SHORTS HACKS</b><span class="len">7:41</span></div>
+          <div class="card" style="--h: 24; --sx: 79%"><b>WHAT I EAT</b><span class="len">10:02</span></div>
+          <div class="card" style="--h: 210; --sx: 66%"><b>DESK SETUP</b><span class="len">8:37</span></div>
+          <div class="card" style="--h: 350; --sx: 73%"><b>NEW CHANNEL</b><span class="len">4:59</span></div>
+          <div class="card" style="--h: 90; --sx: 80%"><b>ASK ME ANYTHING</b><span class="len">32:45</span></div>
+          <div class="card" style="--h: 260; --sx: 67%"><b>GEAR I USE</b><span class="len">14:18</span></div>
+          </div>
+        </div>
+      </div>
+
+      <section class="scene" id="s0" data-at="0" data-len="4">
+        <h1 class="title" data-fx="words" data-t="0">Grab any <img class="ico" src="assets/youtube.svg" alt="" />YouTube <mark>thumbnail</mark></h1>
+      </section>
+
+      <section class="scene" id="s1" data-at="4" data-len="4">
+        <h2 class="title" data-fx="words" data-t="0.2">Paste the video <mark>link</mark></h2>
+        <div class="field" style="width: 740px; left: 420px" data-fx="rise" data-t="0.5"><span data-fx="type" data-t="0.9" data-cps="30">youtube.com/watch?v=ep12</span></div>
+        <div class="btn" style="position: absolute; left: 1180px; top: 900px" data-fx="rise@0.6 press@2.3">Get thumbnail</div>
+        <svg class="cursor" viewBox="0 0 40 40" data-path='[[0.7,1600,1040],[2.3,1300,945,"click"],[3.4,1500,1000]]'><path d="M4 2 L4 32 L12 24 L18 37 L23 35 L17 22 L28 22 Z" fill="#f5f5f5" stroke="#0b0b0d" stroke-width="2.5" stroke-linejoin="round" /></svg>
+      </section>
+
+      <section class="scene" id="s2" data-at="8" data-len="4">
+        <h2 class="title" data-fx="words" data-t="0.2">In the largest <mark>size</mark></h2>
+        <div style="position: absolute; left: 0; right: 0; top: 820px; display: flex; justify-content: center; gap: 22px" data-fx="rise" data-t="1.0">
+          <span class="chip hot">1280×720 HD</span><span class="btn" style="height: 60px; font-size: 28px; padding: 0 26px" data-fx="press" data-t="2.4">Download JPG</span>
+        </div>
+      </section>
+
+      <section class="scene" id="s3" data-at="12" data-len="3.8">
+        <h2 class="title" data-fx="words" data-t="0.2">Videos, Shorts and <mark>live streams</mark></h2>
+        <div style="position: absolute; left: 0; right: 0; top: 880px; display: flex; justify-content: center; gap: 120px" data-fx="rise" data-each="0.15" data-t="1.0">
+          <span class="chip">video</span><span class="chip">Short</span><span class="chip">live</span>
+        </div>
+      </section>
+
+      <section class="scene" id="s4" data-at="15.8" data-len="4">
+        <img src="assets/logo-light.svg" alt="Clipwing" style="position: absolute; left: 700px; top: 300px; width: 520px" data-fx="blur" data-t="0.3" />
+        <h2 class="title" style="top: 490px; font-size: 76px" data-fx="words" data-t="0.5">Free thumbnail <mark>downloader</mark></h2>
+        <div style="position: absolute; left: 0; right: 0; top: 640px; text-align: center" data-fx="rise" data-t="1.0"><span class="btn" style="font-family: var(--mono); font-weight: 500">clipwing.pro/youtube-thumbnail-downloader</span></div>
+        <div style="position: absolute; left: 0; right: 0; top: 790px; text-align: center; font-family: var(--mono); font-size: 28px; color: var(--dim)" data-fx="fade" data-t="1.3">HD · Shorts covers · no sign-up</div>
+      </section>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = CardCarousel.build();
+    </script>
+  </body>
+</html>

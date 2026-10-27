@@ -24,5 +24,115 @@
     "visual_from": "MP4",
     "visual_to": "SFX",
     "visual_caption": "REAL SOUNDS. ON THE FRAME."
+  },
+  {
+    "slug": "video-style-flat-highlight",
+    "name": "Flat Highlight video style",
+    "summary": "Bright product promos: flat colour scenes, words that jump in, one key word on a brand-colour plate, one UI card per scene.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
+  },
+  {
+    "slug": "video-style-dark-pixel",
+    "name": "Dark Pixel video style",
+    "summary": "Dark tech promos with one accent colour, a pixel mascot, a browser where a cursor types and clicks, and pixel-stripe shutters.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
+  },
+  {
+    "slug": "video-style-film-slice",
+    "name": "Film Slice 3D video style",
+    "summary": "One 3D metaphor for video tools: a long video as a film strip, a piece lifts off and lands as a finished clip.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
+  },
+  {
+    "slug": "video-style-pixel-captions",
+    "name": "Pixel Captions video style",
+    "summary": "Vertical shorts where the captions are the hero: words light up as they are said, one word on a plate, a pixel scene above.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
+  },
+  {
+    "slug": "video-style-hud-dashboard",
+    "name": "HUD Dashboard video style",
+    "summary": "A no-cut control panel: a turning point sphere lights up, counters tick, a log grows. A system at work in 20 seconds.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
+  },
+  {
+    "slug": "video-style-card-carousel",
+    "name": "Card Carousel 3D video style",
+    "summary": "Many cards in 3D layouts that flow into each other: a turning ring, an arc, a focus, a fan. For galleries and catalogues.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
+  },
+  {
+    "slug": "video-style-mono-grid",
+    "name": "Mono Grid video style",
+    "summary": "A black-and-white editorial film in four panels. Each panel has its own rhythm, and the panels change one by one.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
+  },
+  {
+    "slug": "video-style-paper-collage",
+    "name": "Paper Collage video style",
+    "summary": "Explainers that look made by hand: torn paper on dark cardboard, cut-out words, typewriter labels and a red thread.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
+  },
+  {
+    "slug": "video-style-mascot-pastel",
+    "name": "Mascot Pastel video style",
+    "summary": "Friendly promos with a character: pastel scenes that flow into each other, a serif accent word, a phone with the live product.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
+  },
+  {
+    "slug": "video-style-split-compare",
+    "name": "Split Compare video style",
+    "summary": "Before and after on one frame: a compare slider, BEFORE and AFTER tags, a frame that reshapes, scene changes by a seam.",
+    "category": "Video styles",
+    "platform": "Claude Code",
+    "version": "1.0.0",
+    "updated": "2026-10-26",
+    "image": "video-styles.png",
+    "collection": "video-styles"
   }
 ]

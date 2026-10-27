@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="film-core.js"></script>
+    <script src="kit.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 800; }
+      :root {
+        /* Brand: swap --brand for the product's colour; scene colours stay. */
+        --brand: #6366f1;
+        --cream: #f3f1eb; --ink: #151517; --ok: #22c55e; --bad: #f87171;
+        --peach: #ffb27a; --peri: #90a6ee; --yellow: #f2ef3f; --mint: #7fe3b8; --sky: #7dc2ff; --lilac: #c8b6fe;
+        --mono: "JetBrains Mono", monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--cream); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: var(--ink); font-feature-settings: "tnum"; }
+      #floods, .flood, .scene { position: absolute; inset: 0; }
+      .flood { clip-path: inset(100% 0 0 0); }
+
+      /* Corner labels: section kicker top-left (per scene), running timecode top-right. */
+      .kick, #corner { position: absolute; top: 52px; font-family: var(--mono); font-size: 26px; color: rgba(21, 21, 23, 0.85); }
+      .kick { left: 64px; }
+      .dark .kick { color: rgba(243, 241, 235, 0.7); }
+      #corner { right: 64px; z-index: 5; }
+
+      /* Headline: left, 2-3 short lines, words jump in, one <mark> on the brand plate. */
+      .title { isolation: isolate; position: absolute; left: 120px; top: 380px; width: 860px; font-weight: 500; font-size: 112px; line-height: 1.08; letter-spacing: -0.025em; }
+      .dark .title { color: var(--cream); }
+      .ln { display: block; white-space: nowrap; }
+      .w { display: inline-block; }
+      mark { position: relative; display: inline-block; background: none; color: inherit; padding: 0 0.06em; --plate: inset(0 100% 0 0); }
+      mark::before { content: ""; position: absolute; inset: 0.08em -0.04em 0.02em; background: var(--brand); clip-path: var(--plate); z-index: -1; border-radius: 6px; }
+      mark { z-index: 0; }
+
+      /* UI card: white, ink outline, hard offset shadow. Right side, 40-45% of the width. */
+      .card { position: absolute; left: 990px; width: 830px; background: #fff; border: 2.5px solid var(--ink); border-radius: 14px; box-shadow: 6px 6px 0 var(--ink); padding: 34px 38px; }
+      .lab { font-family: var(--mono); font-size: 26px; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(21, 21, 23, 0.8); }
+      .big { font-size: 46px; font-weight: 600; letter-spacing: -0.01em; margin-top: 8px; }
+      .row { display: flex; align-items: center; gap: 16px; }
+      .chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px; border: 2px solid var(--ink); border-radius: 999px; font-family: var(--mono); font-size: 28px; font-weight: 600; background: var(--ok); white-space: nowrap; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; height: 84px; padding: 0 36px; border-radius: 12px; border: 2.5px solid var(--ink); background: var(--brand); color: #fff; font-size: 34px; font-weight: 600; box-shadow: 4px 4px 0 var(--ink); }
+      .btn.ghost { background: #fff; color: var(--ink); }
+      .track { position: relative; height: 84px; border: 2.5px solid var(--ink); border-radius: 10px; overflow: hidden; background: #fff; }
+      .fill { position: absolute; inset: 0; background: var(--ink); }
+      .frame { position: relative; border: 2.5px solid var(--ink); border-radius: 10px; overflow: hidden; background: linear-gradient(135deg, #2b2f6b, #6366f1 60%, #a5b4fc); }
+      .frame::before { content: ""; position: absolute; left: 50%; bottom: -8%; width: 46%; height: 70%; transform: translateX(-50%); background: radial-gradient(circle at 50% 22%, #f3f1eb 0 17%, transparent 17.5%), radial-gradient(ellipse at 50% 100%, #f3f1eb 0 48%, transparent 48.5%); opacity: 0.9; }
+      .cursor { position: absolute; left: 0; top: 0; width: 34px; height: 40px; z-index: 20; }
+
+      /* Brand mark in a white circle, bottom-left, in every scene except intro and end. */
+      #avatar { position: absolute; left: 56px; top: 914px; width: 110px; height: 110px; border-radius: 50%; background: #fff; border: 2.5px solid var(--ink); display: flex; align-items: center; justify-content: center; z-index: 6; opacity: 0; }
+      #avatar img { width: 56px; height: 56px; }
+
+      /* Waveform: bars are generated from data-bars by the kit, deterministic heights. */
+      .wave { position: absolute; left: 14px; right: 14px; top: 0; bottom: 0; display: flex; align-items: center; gap: 5px; }
+      .wave i { flex: 1; border-radius: 3px; background: rgba(21, 21, 23, 0.7); }
+      .gap { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, #fde2e2 0 10px, #fbc7c7 10px 20px); border-left: 2px solid var(--bad); border-right: 2px solid var(--bad); }
+      .gap span { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: var(--mono); font-size: 24px; font-weight: 700; color: #991b1b; white-space: nowrap; }
+
+      /* Transcript card (scene 4). */
+      .tr { font-size: 48px; line-height: 1.6; font-weight: 500; }
+      .tr .p, .tr .um { display: inline-block; padding: 0 12px; border-radius: 8px; font-family: var(--mono); font-size: 30px; font-weight: 700; line-height: 50px; vertical-align: 4px; }
+      .tr .p { background: #fde2e2; color: #991b1b; border: 2px solid var(--bad); }
+      .tr .um { background: #fef3c7; color: #92400e; border: 2px solid #f59e0b; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="22.8" data-width="1920" data-height="1080">
+      <div id="floods" class="clip" data-start="0" data-duration="22.8" data-track-index="0"></div>
+      <div id="corner"><span id="tc" data-name="GAP REMOVER"></span></div>
+      <div id="avatar"><img src="assets/mark.svg" alt="" /></div>
+
+      <!-- 0 · hook: the problem in one line, a card that shows it -->
+      <section class="scene" id="s0" data-at="0" data-len="3.6" data-bg="var(--cream)" data-avatar="off">
+        <div class="kick">// for creators</div>
+        <h1 class="title" data-fx="words" data-t="0.2"><span class="ln">Your video is</span><span class="ln">full of</span><span class="ln"><mark>pauses</mark></span></h1>
+        <div class="card" style="top: 320px" data-fx="card" data-t="0.5">
+          <div class="lab">podcast-ep12.mp4 · sample</div>
+          <div class="track" style="margin-top: 26px; height: 230px">
+            <div class="wave" data-bars="64" data-seed="3"></div>
+            <div class="gap" style="left: 18%; width: 15%" data-fx="pop" data-t="1.3"><span>2.1 s</span></div>
+            <div class="gap" style="left: 52%; width: 11%" data-fx="pop" data-t="1.5"><span>1.6 s</span></div>
+            <div class="gap" style="left: 80%; width: 13%" data-fx="pop" data-t="1.7"><span>1.9 s</span></div>
+          </div>
+          <div class="row" style="margin-top: 22px; gap: 12px">
+            <span class="chip" style="background: #fef3c7" data-fx="tick" data-t="2.0">um</span>
+            <span class="chip" style="background: #fef3c7" data-fx="tick" data-t="2.15">uh</span>
+            <span class="chip" style="background: #fef3c7" data-fx="tick" data-t="2.3">um</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1 · meet: dark scene, product name -->
+      <section class="scene dark" id="s1" data-at="3.6" data-len="3.2" data-bg="var(--ink)">
+        <div class="kick">// 01 · meet</div>
+        <h2 class="title" style="top: 440px; font-size: 150px" data-fx="words" data-t="0.2">Meet</h2>
+        <img src="assets/logo-light.svg" alt="Clipwing" style="position: absolute; left: 1000px; top: 380px; width: 620px" data-fx="right" data-t="0.45" />
+        <div style="position: absolute; left: 1004px; top: 590px; font-size: 84px; font-weight: 600; letter-spacing: -0.02em; color: var(--cream)" data-fx="rise" data-t="0.75">Gap Remover</div>
+        <div style="position: absolute; left: 1006px; top: 720px; font-family: var(--mono); font-size: 32px; color: rgba(243, 241, 235, 0.75)" data-fx="fade" data-t="1.1">free · runs in your browser</div>
+      </section>
+
+      <!-- 2 · step: drop a video, it finds the pauses -->
+      <section class="scene" id="s2" data-at="6.8" data-len="4" data-bg="var(--peach)">
+        <div class="kick">// 02 · upload</div>
+        <h2 class="title" data-fx="words" data-t="0.2"><span class="ln">Drop in a</span><span class="ln"><mark>video</mark></span></h2>
+        <div class="card" style="top: 270px" data-fx="card" data-t="0.4">
+          <div class="lab">up to 10 minutes · mp4 mov webm</div>
+          <div class="row" style="margin-top: 22px">
+            <div class="frame" style="width: 260px; height: 146px"></div>
+            <div><div class="big" style="margin: 0">podcast-ep12.mp4</div><div class="lab" style="margin-top: 6px">8:42</div></div>
+          </div>
+          <div class="track" style="margin-top: 34px; height: 80px"><div class="fill" style="background: var(--brand)" data-fx="fill-x" data-t="1.0" data-d="1.6"></div></div>
+          <div class="row" style="margin-top: 22px; justify-content: space-between">
+            <span class="lab">finding pauses</span>
+            <span class="chip" data-fx="tick" data-t="2.7">14 pauses · 9 fillers</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 · step: one click cuts them -->
+      <section class="scene" id="s3" data-at="10.8" data-len="4.6" data-bg="var(--peri)">
+        <div class="kick">// 03 · cut</div>
+        <h2 class="title" data-fx="words" data-t="0.2"><span class="ln">Cut them in</span><span class="ln"><mark>1 click</mark></span></h2>
+        <div class="card" style="top: 250px" data-fx="card" data-t="0.4">
+          <div class="row" style="justify-content: space-between"><span class="lab">transcript</span><span class="big" style="margin: 0; font-size: 44px"><span data-fx="count" data-from="522" data-to="455" data-fmt="time" data-t="2.0" data-d="1.4">8:42</span></span></div>
+          <p class="tr" style="margin-top: 14px">So <span class="um" data-fx="cut" data-t="2.9">um</span> today <span class="p" data-fx="cut" data-t="1.9">2.1 s</span> we talk <span class="um" data-fx="cut" data-t="3.0">uh</span> about <span class="p" data-fx="cut" data-t="2.0">1.6 s</span> faster edits</p>
+          <div class="row" style="margin-top: 24px">
+            <span class="btn" id="s3-cut" data-fx="press" data-t="1.75">Cut pauses</span>
+            <span class="btn ghost" data-fx="press" data-t="2.75">Cut fillers</span>
+          </div>
+        </div>
+        <svg class="cursor" viewBox="0 0 24 28" data-path='[[0.9,1700,980],[1.75,1150,570,"click"],[2.75,1410,570,"click"],[3.6,1560,700]]'><path d="M2 2 L2 22 L8 17 L12 26 L16 24 L12 15 L20 15 Z" fill="#151517" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" /></svg>
+      </section>
+
+      <!-- 4 · step: export -->
+      <section class="scene" id="s4" data-at="15.4" data-len="3.8" data-bg="var(--mint)">
+        <div class="kick">// 04 · download</div>
+        <h2 class="title" data-fx="words" data-t="0.2"><span class="ln">Download your</span><span class="ln"><mark>MP4</mark></span></h2>
+        <div class="card" style="top: 220px" data-fx="card" data-t="0.4">
+          <div class="frame" style="height: 420px"></div>
+          <div class="row" style="margin-top: 24px; justify-content: space-between">
+            <span class="btn" data-fx="press" data-t="1.3">Export</span>
+            <div class="track" style="flex: 1; height: 30px; border-width: 2px"><div class="fill" style="background: var(--ok)" data-fx="fill-x" data-t="1.45" data-d="1.0"></div></div>
+            <span class="chip" data-fx="tick" data-t="2.5">ready</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5 · end card: whips in from the right -->
+      <section class="scene" id="s5" data-at="19.2" data-len="3.6" data-bg="var(--cream)" data-in="whip" data-avatar="off">
+        <img src="assets/logo-dark.svg" alt="Clipwing" style="position: absolute; left: 680px; top: 250px; width: 560px" data-fx="pop" data-t="0.2" />
+        <h2 class="title" style="left: 0; right: 0; width: auto; top: 480px; text-align: center; font-size: 76px" data-fx="words" data-t="0.5">Cut the pauses for <mark>free</mark></h2>
+        <div class="btn" style="position: absolute; left: 700px; width: 520px; top: 640px; height: 84px; font-size: 30px" data-fx="rise" data-t="1.2">clipwing.pro/gap-remover</div>
+        <div style="position: absolute; left: 0; right: 0; top: 790px; text-align: center; font-family: var(--mono); font-size: 28px; color: rgba(21, 21, 23, 0.8)" data-fx="fade" data-t="1.6">no sign-up · no watermark · your video stays in your browser</div>
+      </section>
+    </div>
+    <script>
+      // Deterministic waveform bars for every .wave[data-bars].
+      document.querySelectorAll(".wave[data-bars]").forEach((w) => {
+        const n = +w.dataset.bars, seed = +(w.dataset.seed || 1);
+        for (let i = 0; i < n; i++) {
+          const b = document.createElement("i");
+          b.style.height = 18 + Math.round(Film.hash(i * 7.3 + seed) * 62) + "%";
+          w.appendChild(b);
+        }
+      });
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = FlatHighlight.build();
+    </script>
+  </body>
+</html>

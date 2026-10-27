@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="film-core.js"></script>
+    <script src="kit.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; src: url("assets/fonts/inter.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/jetbrains-mono.woff2") format("woff2"); font-weight: 100 800; }
+      :root {
+        --accent: #6366f1; /* the "after" colour: the handle, the seam, the underline, the AFTER tag */
+        --paper: #efece6; --ink: #141414; --muted: #6b6862; --card: #ffffff;
+        --mono: "JetBrains Mono", monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: "Inter", sans-serif; color: var(--ink); }
+      .scene { position: absolute; inset: 0; background: var(--paper); }
+      #seam { position: absolute; left: -3px; top: 0; bottom: 0; width: 6px; background: var(--accent); z-index: 100; opacity: 0; box-shadow: 0 0 30px rgba(99, 102, 241, 0.6); }
+      .kick { position: absolute; left: 96px; top: 70px; font-family: var(--mono); font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+      /* Headline: big, left, two lines; the accent word is underlined in the "after" colour. */
+      .title { position: absolute; left: 96px; top: 150px; width: 760px; font-weight: 700; font-size: 104px; line-height: 1.02; letter-spacing: -0.035em; }
+      .ln { display: block; }
+      .w { display: inline-block; margin-right: 0.2em; }
+      mark { position: relative; background: none; color: inherit; --u: 0; }
+      mark::after { content: ""; position: absolute; left: 0; right: 0; bottom: -0.04em; height: 0.12em; background: var(--accent); transform: scaleX(var(--u)); transform-origin: 0 50%; }
+      .note { position: absolute; left: 96px; font-family: var(--mono); font-size: 28px; color: var(--muted); }
+
+      /* Tags: BEFORE in ink outline, AFTER in the accent. */
+      .tag { position: absolute; padding: 8px 18px; border-radius: 8px; font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: 0.08em; z-index: 5; }
+      .tag.b { background: var(--card); border: 2px solid var(--ink); }
+      .tag.a { background: var(--accent); color: #fff; }
+
+      /* A drawn video frame: a speaker in a room; .wide is 16:9 framing, .tall the same shot cropped to 9:16. */
+      .shot { position: absolute; overflow: hidden; border-radius: 18px; background: linear-gradient(160deg, #26304f, #4f62a8 55%, #e9b07a); box-shadow: 0 24px 60px rgba(20, 20, 20, 0.18); }
+      .shot::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 24%; background: rgba(15, 15, 25, 0.35); }
+      .shot i { position: absolute; left: 50%; bottom: 0; width: var(--pw, 30%); height: var(--ph, 74%); transform: translateX(-50%); background: radial-gradient(circle at 50% 24%, #f4e6d8 0 18%, transparent 18.5%), radial-gradient(ellipse at 50% 100%, #f4e6d8 0 50%, transparent 50.5%); }
+      .shot .lamp { position: absolute; left: 12%; top: 18%; width: 9%; aspect-ratio: 1; border-radius: 50%; background: #ffd9a0; box-shadow: 0 0 60px #ffd9a0; }
+      .compare { position: absolute; overflow: hidden; border-radius: 26px; box-shadow: 0 24px 60px rgba(20, 20, 20, 0.2); }
+      .compare > div { position: absolute; inset: 0; }
+      .handle { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -3px; background: #fff; z-index: 4; }
+      .handle::after { content: ""; position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; background: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.3); }
+      .blurfill { filter: blur(26px) brightness(0.85); }
+      .btn { display: inline-flex; align-items: center; height: 88px; padding: 0 40px; border-radius: 14px; background: var(--accent); color: #fff; font-family: var(--mono); font-size: 32px; }
+      .chip { display: inline-flex; padding: 10px 22px; border-radius: 999px; border: 2px solid var(--ink); font-family: var(--mono); font-size: 28px; font-weight: 600; background: var(--card); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="20.4" data-width="1920" data-height="1080">
+      <div id="ground" class="clip" data-start="0" data-duration="20.4" data-track-index="0" style="position: absolute; inset: 0; background: var(--paper)"></div>
+      <div id="seam"></div>
+
+      <!-- 0 · the problem: a wide video -->
+      <section class="scene" id="s0" data-at="0" data-len="4">
+        <div class="kick">// before</div>
+        <h1 class="title" style="top: 330px" data-fx="words" data-t="0.2"><span class="ln">Your video</span><span class="ln">is <mark>wide</mark></span></h1>
+        <div class="shot" style="left: 900px; top: 270px; width: 900px; height: 506px"><div class="lamp"></div><i></i></div>
+        <span class="tag b" style="left: 924px; top: 294px" data-fx="pop" data-t="0.4">16:9</span>
+      </section>
+
+      <!-- 1 · side by side: what it needs to be -->
+      <section class="scene" id="s1" data-at="4" data-len="4.4">
+        <div class="kick">// before · after</div>
+        <h2 class="title" data-fx="words" data-t="0.3"><span class="ln">Shorts need</span><span class="ln"><mark>9:16</mark></span></h2>
+        <div class="shot" style="left: 96px; top: 520px; width: 760px; height: 428px"><div class="lamp"></div><i></i></div>
+        <span class="tag b" style="left: 120px; top: 544px">BEFORE</span>
+        <svg style="position: absolute; left: 880px; top: 680px; width: 200px; height: 100px" viewBox="0 0 200 100"><path d="M10 50 H170 M140 20 L175 50 L140 80" fill="none" stroke="#141414" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" data-fx="draw" data-t="0.8" data-d="0.5" /></svg>
+        <div class="shot" style="left: 1180px; top: 90px; width: 500px; height: 889px; --pw: 70%; --ph: 64%" data-fx="reshape" data-from="760,428" data-t="1.1"><div class="lamp" style="left: -10%"></div><i></i></div>
+        <span class="tag a" style="left: 1204px; top: 114px" data-fx="pop" data-t="1.9">AFTER · 9:16</span>
+      </section>
+
+      <!-- 2 · the compare slider: blur fill vs crop -->
+      <section class="scene" id="s2" data-at="8.4" data-len="4.8">
+        <div class="kick">// pick a mode</div>
+        <h2 class="title" data-fx="words" data-t="0.3"><span class="ln">Blur fill</span><span class="ln">or <mark>crop</mark></span></h2>
+        <div class="note" style="top: 430px" data-fx="fade" data-t="1.0">blur fill keeps the whole picture</div>
+        <div class="note" style="top: 480px" data-fx="fade" data-t="1.4">crop fills the screen</div>
+        <div class="compare" style="left: 1180px; top: 90px; width: 500px; height: 889px" data-fx="compare" data-t="0.3" data-sweep='[[0,100],[1.2,50],[2.2,18],[3.2,82],[4.2,50]]'>
+          <div class="before"><div class="shot blurfill" style="inset: 0; border-radius: 0; box-shadow: none; --pw: 70%; --ph: 64%"><div class="lamp" style="left: -10%"></div><i></i></div><div class="shot" style="left: 0; top: 304px; width: 500px; height: 281px; border-radius: 0; box-shadow: none"><div class="lamp"></div><i></i></div></div>
+          <div class="after"><div class="shot" style="inset: 0; border-radius: 0; box-shadow: none; --pw: 70%; --ph: 64%"><div class="lamp" style="left: -10%"></div><i></i></div></div>
+          <div class="handle"></div>
+        </div>
+        <span class="tag b" style="left: 1080px; top: 940px" data-fx="pop" data-t="0.8">blur fill</span>
+        <span class="tag a" style="left: 1700px; top: 940px" data-fx="pop" data-t="1.0">crop</span>
+      </section>
+
+      <!-- 3 · the result -->
+      <section class="scene" id="s3" data-at="13.2" data-len="3.8">
+        <div class="kick">// after</div>
+        <h2 class="title" data-fx="words" data-t="0.3"><span class="ln">Download a</span><span class="ln"><mark>1080×1920</mark> MP4</span></h2>
+        <div style="position: absolute; left: 96px; top: 520px; display: flex; gap: 16px" data-fx="rise" data-each="0.15" data-t="1.0"><span class="chip">Shorts</span><span class="chip">Reels</span><span class="chip">TikTok</span></div>
+        <div class="shot" style="left: 1180px; top: 90px; width: 500px; height: 889px; --pw: 70%; --ph: 64%"><div class="lamp" style="left: -10%"></div><i></i></div>
+        <span class="tag a" style="left: 1204px; top: 114px">AFTER · 9:16</span>
+        <div style="position: absolute; left: 96px; top: 660px" data-fx="rise" data-t="1.5"><span class="btn" data-fx="press" data-t="2.4">Convert and download</span></div>
+      </section>
+
+      <!-- 4 · end card -->
+      <section class="scene" id="s4" data-at="17" data-len="3.4">
+        <img src="assets/logo-dark.svg" alt="Clipwing" style="position: absolute; left: 700px; top: 270px; width: 520px" data-fx="rise" data-t="0.2" />
+        <h2 class="title" style="left: 0; right: 0; width: auto; top: 470px; text-align: center; font-size: 76px" data-fx="words" data-t="0.4">Horizontal to <mark>vertical</mark> for free</h2>
+        <div style="position: absolute; left: 0; right: 0; top: 640px; text-align: center" data-fx="rise" data-t="0.9"><span class="btn">clipwing.pro/horizontal-to-vertical-video-converter</span></div>
+        <div class="note" style="left: 0; right: 0; top: 790px; text-align: center" data-fx="fade" data-t="1.1">no upload · no watermark · up to 2 GB</div>
+      </section>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = SplitCompare.build();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="film-core.js"></script>
+    <script src="kit.js"></script>
+    <style>
+      @font-face { font-family: "Oswald"; src: url("assets/fonts/oswald-700.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Special Elite"; src: url("assets/fonts/special-elite.woff2") format("woff2"); }
+      :root {
+        --board: #2b2b2b; --paper: #ece4d0; --paper2: #d8cdb8; --ink: #1b1b1b;
+        --mustard: #d9a94a; --red: #c8372d; --thread: #c8372d;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--board); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--board); color: var(--ink); }
+      /* Each scene is a sheet of cardboard with grain, so a sheet sliding over another reads as paper. */
+      .scene { position: absolute; inset: 0; background: var(--board); overflow: hidden; }
+      .scene::before { content: ""; position: absolute; inset: 0; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' seed='7'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .09 0'/></filter><rect width='400' height='400' filter='url(%23n)'/></svg>"); }
+      .scene::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,0.45)); }
+      .stage { position: absolute; inset: 0; transform-origin: 50% 50%; }
+
+      /* Cut-outs: torn edges come from the kit; --r is each object's resting turn. */
+      .cut { position: absolute; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.45); }
+      .big { position: absolute; font-family: "Oswald", sans-serif; font-weight: 700; line-height: 0.9; letter-spacing: 0.01em; text-shadow: 5px 6px 0 rgba(0, 0, 0, 0.45); }
+      .big .ch { display: inline-block; }
+      .label { position: absolute; padding: 10px 20px 8px; background: var(--paper); font-family: "Special Elite", monospace; font-size: 36px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35); white-space: nowrap; }
+      .tape { position: absolute; width: 150px; height: 46px; background: rgba(235, 225, 200, 0.82); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+      .thread { position: absolute; inset: 0; pointer-events: none; }
+      .blot { position: absolute; border-radius: 47% 53% 44% 56% / 52% 46% 54% 48%; background: var(--red); }
+
+      /* Objects drawn in paper: a video frame, a page of text. */
+      .vframe { background: linear-gradient(140deg, #3c4f7a, #8aa3c8); }
+      .vframe::before { content: ""; position: absolute; left: 50%; bottom: 0; width: 40%; height: 76%; transform: translateX(-50%); background: radial-gradient(circle at 50% 24%, var(--paper) 0 18%, transparent 18.5%), radial-gradient(ellipse at 50% 100%, var(--paper) 0 50%, transparent 50.5%); }
+      .vframe .play { position: absolute; left: 50%; top: 42%; width: 0; height: 0; margin: -28px 0 0 -18px; border-left: 48px solid var(--red); border-top: 28px solid transparent; border-bottom: 28px solid transparent; }
+      .page { background: var(--paper); padding: 44px 46px; font-family: "Special Elite", monospace; font-size: 30px; line-height: 1.55; }
+      .page p { white-space: nowrap; }
+      .page .tc { color: var(--red); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="20.4" data-width="1920" data-height="1080">
+      <div id="ground" class="clip" data-start="0" data-duration="20.4" data-track-index="0" style="position: absolute; inset: 0; background: var(--board)"></div>
+
+      <!-- 0 · hook: a long video is a lot of talk -->
+      <section class="scene" id="s0" data-at="0" data-len="4.2">
+        <div class="stage">
+          <div class="cut torn vframe" style="--r: -4deg; left: 260px; top: 250px; width: 700px; height: 400px" data-fx="stick" data-t="0"><div class="play"></div></div>
+          <div class="tape" style="left: 520px; top: 228px; transform: rotate(-6deg)" data-fx="tape" data-t="0.4"></div>
+          <div class="big title" style="left: 1040px; top: 250px; font-size: 230px; color: var(--mustard)" data-fx="letters" data-t="0.6">42 MIN</div>
+          <div class="label" style="left: 1060px; top: 500px; --r: 2deg" data-fx="stick" data-t="1.3">of talking · sample</div>
+          <div class="blot" style="left: 200px; top: 610px; width: 120px; height: 110px" data-fx="blot" data-t="1.7"></div>
+        </div>
+      </section>
+
+      <!-- 1 · paste the link: a thread from the video to the link -->
+      <section class="scene" id="s1" data-at="4.2" data-len="4.4">
+        <div class="stage">
+          <div class="cut torn vframe" style="--r: 3deg; left: 220px; top: 320px; width: 520px; height: 300px" data-fx="stick" data-t="0.3"><div class="play"></div></div>
+          <svg class="thread" viewBox="0 0 1920 1080"><path d="M720 470 C 900 380, 1000 600, 1180 520" fill="none" stroke="var(--thread)" stroke-width="4" data-fx="draw" data-t="0.8" data-d="0.7" /></svg>
+          <div class="label" style="left: 1180px; top: 486px; font-size: 40px; --r: -2deg" data-fx="stick" data-t="1.3">youtube.com/watch?v=ep12</div>
+          <div class="big title" style="left: 0; right: 0; top: 120px; text-align: center; font-size: 150px; color: var(--paper)" data-fx="letters" data-t="0.5">PASTE THE LINK</div>
+          <div class="label" style="left: 820px; top: 760px; --r: 1.5deg" data-fx="stick" data-t="2.0">no download needed</div>
+        </div>
+      </section>
+
+      <!-- 2 · the transcript appears -->
+      <section class="scene" id="s2" data-at="8.6" data-len="4.6">
+        <div class="stage">
+          <div class="cut torn page" style="--r: -2deg; left: 1060px; top: 250px; width: 720px; height: 460px" data-fx="stick" data-t="0.3">
+            <p><span class="tc">0:00</span> So today we talk about</p>
+            <p>editing long videos faster</p>
+            <p><span class="tc">0:14</span> First, find the best</p>
+            <p>moments before you cut</p>
+            <p><span class="tc">0:31</span> Then add the captions</p>
+            <p>and post 3 clips a week</p>
+          </div>
+          <div class="tape" style="left: 1350px; top: 230px; transform: rotate(4deg)" data-fx="tape" data-t="0.75"></div>
+          <div class="big title torn" style="--r: -3deg; left: 110px; top: 290px; padding: 22px 34px 6px; font-size: 140px; color: var(--red); background: var(--paper); text-shadow: none" data-fx="stick@0.8 letters@0.95">TRANSCRIPT</div>
+          <div class="label" style="left: 150px; top: 520px; --r: -2deg" data-fx="stick" data-t="1.8">the full text · in seconds</div>
+          <div class="blot" style="left: 1700px; top: 650px; width: 120px; height: 105px" data-fx="blot" data-t="2.2"></div>
+        </div>
+      </section>
+
+      <!-- 3 · what to do with it -->
+      <section class="scene" id="s3" data-at="13.2" data-len="3.8">
+        <div class="stage">
+          <div class="big title" style="left: 0; right: 0; top: 110px; text-align: center; font-size: 140px; color: var(--mustard)" data-fx="letters" data-t="0.4">READ IT · REUSE IT</div>
+          <div class="cut torn page" style="--r: -5deg; left: 300px; top: 420px; width: 400px; height: 300px" data-fx="stick" data-t="1.0"><p>article draft</p></div>
+          <div class="cut torn page" style="--r: 3deg; left: 760px; top: 460px; width: 400px; height: 300px" data-fx="stick" data-t="1.25"><p>show notes</p></div>
+          <div class="cut torn page" style="--r: -1deg; left: 1220px; top: 420px; width: 400px; height: 300px" data-fx="stick" data-t="1.5"><p>quotes</p></div>
+          <svg class="thread" viewBox="0 0 1920 1080"><path d="M700 560 C 720 620, 760 600, 770 600 M1160 600 C 1180 560, 1210 560, 1225 560" fill="none" stroke="var(--thread)" stroke-width="4" data-fx="draw" data-t="1.9" data-d="0.6" /></svg>
+        </div>
+      </section>
+
+      <!-- 4 · end -->
+      <section class="scene" id="s4" data-at="17" data-len="3.4">
+        <div class="stage">
+          <div class="cut torn" style="--r: -2deg; left: 500px; top: 210px; width: 920px; height: 620px; background: var(--paper)" data-fx="stick" data-t="0.2"></div>
+          <img src="assets/logo-dark.svg" alt="Clipwing" style="position: absolute; left: 720px; top: 290px; width: 480px" data-fx="fade" data-t="0.6" />
+          <div class="big title" style="left: 0; right: 0; top: 460px; text-align: center; font-size: 80px; color: var(--red); text-shadow: none" data-fx="letters" data-t="0.8">FREE TRANSCRIPTS</div>
+          <div class="label" style="left: 575px; top: 640px; font-size: 32px; background: var(--paper2)" data-fx="stick" data-t="1.4">clipwing.pro/youtube-transcript-generator</div>
+        </div>
+      </section>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = PaperCollage.build();
+    </script>
+  </body>
+</html>

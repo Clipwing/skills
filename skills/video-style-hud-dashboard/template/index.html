@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="film-core.js"></script>
+    <script src="kit.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/geist-latin.woff2") format("woff2"); font-weight: 100 900; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist-mono-latin.woff2") format("woff2"); font-weight: 100 900; }
+      :root {
+        /* One accent. Orange is the style's own; swap it for the brand colour if the brand needs it. */
+        --accent: #ff6a1a; --glow: #ffb070;
+        --bg: #030303; --panel: #0a0a0a; --line: #2a2a2a; --text: #e8e8e8; --dim: #8a8a8a; --wait: #f5c542;
+        --mono: "Geist Mono", monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: var(--mono); color: var(--text); }
+      .panel { position: absolute; background: var(--panel); border: 1px solid var(--line); overflow: hidden; }
+      .ph { position: absolute; left: 0; top: 0; padding: 4px 12px; background: var(--accent); color: #0a0a0a; font-size: 24px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+      .lab { font-size: 24px; color: var(--dim); letter-spacing: 0.06em; text-transform: uppercase; }
+      .num { font-size: 54px; font-weight: 600; color: var(--accent); line-height: 1.1; }
+      pre { font-family: var(--mono); font-size: 25px; line-height: 1.4; white-space: pre-wrap; margin-top: 12px; }
+      pre b { color: var(--accent); font-weight: 600; }
+      .tm { color: var(--dim); white-space: nowrap; }
+      .stack { position: absolute; inset: 64px 26px 20px; }
+      .stack > div { position: absolute; inset: 0; }
+      .logview { position: absolute; left: 26px; right: 26px; top: 64px; bottom: 16px; overflow: hidden; }
+      #log { position: absolute; left: 0; right: 0; top: 0; }
+      #log div { height: 44px; font-size: 26px; white-space: nowrap; }
+      #log b { color: var(--accent); font-weight: 600; }
+      #bars { position: absolute; left: 26px; right: 26px; bottom: 56px; top: 80px; display: flex; align-items: flex-end; gap: 8px; }
+      #bars div { flex: 1; height: 100%; background: var(--accent); position: relative; }
+      #bars div span { position: absolute; left: 0; right: 0; bottom: -40px; text-align: center; font-size: 20px; color: var(--dim); }
+      .callout { position: absolute; left: 0; right: 0; top: 34px; text-align: center; font-family: "Geist", sans-serif; font-weight: 700; font-size: 52px; letter-spacing: -0.02em; z-index: 5; }
+      .callout .w { margin: 0 0.12em; }
+      mark { background: none; color: var(--accent); }
+      .scene { position: absolute; inset: 0; pointer-events: none; }
+      .dash { position: absolute; inset: 0; }
+      .btn { display: inline-flex; align-items: center; height: 84px; padding: 0 36px; background: var(--accent); color: #0a0a0a; font-size: 32px; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="20.4" data-width="1920" data-height="1080">
+      <div id="ground" class="clip" data-start="0" data-duration="20.4" data-track-index="0" style="position: absolute; inset: 0; background: var(--bg)"></div>
+
+      <div class="dash" data-fx="dim" data-t="15.9">
+      <!-- The dashboard: persistent layers, absolute times. Runs are evenly spaced (see 1.4,2.9,4.4,5.9,7.4,8.9,10.4,11.9). -->
+      <div class="panel" data-layout-allow-overlap style="left: 40px; top: 120px; width: 1840px; height: 120px; border: 0; background: none">
+        <div style="position: absolute; left: 0; top: 0; width: 352px; height: 120px; border: 1px solid var(--line); padding: 16px 22px"><div class="lab">subtitles in</div><div class="num" data-fx="count" data-to="412" data-fmt="space" data-t="0.3" data-d="1">412</div></div>
+        <div style="position: absolute; left: 372px; top: 0; width: 352px; height: 120px; border: 1px solid var(--line); padding: 16px 22px"><div class="lab">languages done</div><div class="num" data-fx="tally" data-ticks="1.4,2.9,4.4,5.9,7.4,8.9,10.4,11.9" data-suf=" / 30">0</div></div>
+        <div style="position: absolute; left: 744px; top: 0; width: 352px; height: 120px; border: 1px solid var(--line); padding: 16px 22px"><div class="lab">timings changed</div><div class="num">0</div></div>
+        <div style="position: absolute; left: 1116px; top: 0; width: 352px; height: 120px; border: 1px solid var(--line); padding: 16px 22px"><div class="lab">names kept</div><div class="num">Clipwing</div></div>
+        <div style="position: absolute; left: 1488px; top: 0; width: 352px; height: 120px; border: 1px solid var(--line); padding: 16px 22px"><div class="lab">files out</div><div class="num" data-fx="tally" data-ticks="1.4,2.9,4.4,5.9,7.4,8.9,10.4,11.9">0</div></div>
+      </div>
+
+      <div class="panel" data-layout-allow-overlap style="left: 40px; top: 260px; width: 760px; height: 780px">
+        <div class="ph">languages</div>
+        <canvas class="sphere" width="760" height="780" data-points="2200" data-spin="0.13" data-nodes='[[1.4, "ES"], [2.9, "DE"], [4.4, "FR"], [5.9, "PT"], [7.4, "IT"], [8.9, "NL"], [10.4, "PL"], [11.9, "SV"]]'></canvas>
+      </div>
+
+      <div class="panel" data-layout-allow-overlap style="left: 820px; top: 260px; width: 520px; height: 440px">
+        <div class="ph">input</div>
+        <div class="stack"><div><div class="lab">episode-12.srt · en · sample</div><pre>1
+<span class="tm">00:00:01,200 --> 00:00:03,400</span>
+Welcome back to <b>Clipwing</b>
+
+2
+<span class="tm">00:00:03,600 --> 00:00:05,100</span>
+Episode <b>12</b> starts now</pre></div></div>
+      </div>
+      <div class="panel" data-layout-allow-overlap style="left: 1360px; top: 260px; width: 520px; height: 440px">
+        <div class="ph">output</div>
+        <div class="stack" data-fx="swap" data-layout-allow-overlap>
+              <div data-at="1.4"><div class="lab">output · es.srt</div><pre>1
+<span class="tm">00:00:01,200 --> 00:00:03,400</span>
+Bienvenidos de nuevo a <b>Clipwing</b>
+
+2
+<span class="tm">00:00:03,600 --> 00:00:05,100</span>
+El episodio <b>12</b> empieza ahora</pre></div>
+              <div data-at="2.9"><div class="lab">output · de.srt</div><pre>1
+<span class="tm">00:00:01,200 --> 00:00:03,400</span>
+Willkommen zurück bei <b>Clipwing</b>
+
+2
+<span class="tm">00:00:03,600 --> 00:00:05,100</span>
+Folge <b>12</b> beginnt jetzt</pre></div>
+              <div data-at="4.4"><div class="lab">output · fr.srt</div><pre>1
+<span class="tm">00:00:01,200 --> 00:00:03,400</span>
+Bon retour sur <b>Clipwing</b>
+
+2
+<span class="tm">00:00:03,600 --> 00:00:05,100</span>
+L'épisode <b>12</b> commence maintenant</pre></div>
+              <div data-at="5.9"><div class="lab">output · pt.srt</div><pre>1
+<span class="tm">00:00:01,200 --> 00:00:03,400</span>
+Bem-vindo de volta ao <b>Clipwing</b>
+
+2
+<span class="tm">00:00:03,600 --> 00:00:05,100</span>
+O episódio <b>12</b> começa agora</pre></div>
+              <div data-at="7.4"><div class="lab">output · it.srt</div><pre>1
+<span class="tm">00:00:01,200 --> 00:00:03,400</span>
+Bentornati su <b>Clipwing</b>
+
+2
+<span class="tm">00:00:03,600 --> 00:00:05,100</span>
+L'episodio <b>12</b> inizia ora</pre></div>
+              <div data-at="8.9"><div class="lab">output · nl.srt</div><pre>1
+<span class="tm">00:00:01,200 --> 00:00:03,400</span>
+Welkom terug bij <b>Clipwing</b>
+
+2
+<span class="tm">00:00:03,600 --> 00:00:05,100</span>
+Aflevering <b>12</b> begint nu</pre></div>
+              <div data-at="10.4"><div class="lab">output · pl.srt</div><pre>1
+<span class="tm">00:00:01,200 --> 00:00:03,400</span>
+Witamy ponownie w <b>Clipwing</b>
+
+2
+<span class="tm">00:00:03,600 --> 00:00:05,100</span>
+Odcinek <b>12</b> zaczyna się teraz</pre></div>
+              <div data-at="11.9"><div class="lab">output · sv.srt</div><pre>1
+<span class="tm">00:00:01,200 --> 00:00:03,400</span>
+Välkommen tillbaka till <b>Clipwing</b>
+
+2
+<span class="tm">00:00:03,600 --> 00:00:05,100</span>
+Avsnitt <b>12</b> börjar nu</pre></div>
+        </div>
+      </div>
+
+      <div class="panel" data-layout-allow-overlap style="left: 820px; top: 720px; width: 620px; height: 320px">
+        <div class="ph">tail -f translate.log</div>
+        <div class="logview"><div id="log" data-fx="log" data-rows="5">
+            <div data-at="1.4"><b>[ok]</b> es.srt · 412 · timings kept</div>
+            <div data-at="2.9"><b>[ok]</b> de.srt · 412 · timings kept</div>
+            <div data-at="4.4"><b>[ok]</b> fr.srt · 412 · timings kept</div>
+            <div data-at="5.9"><b>[ok]</b> pt.srt · 412 · timings kept</div>
+            <div data-at="7.4"><b>[ok]</b> it.srt · 412 · timings kept</div>
+            <div data-at="8.9"><b>[ok]</b> nl.srt · 412 · timings kept</div>
+            <div data-at="10.4"><b>[ok]</b> pl.srt · 412 · timings kept</div>
+            <div data-at="11.9"><b>[ok]</b> sv.srt · 412 · timings kept</div>
+        </div></div>
+      </div>
+      <div class="panel" data-layout-allow-overlap style="left: 1460px; top: 720px; width: 420px; height: 320px">
+        <div class="ph">per language</div>
+        <div id="bars" data-fx="bars">
+            <div data-at="1.4" data-v="100"><span>ES</span></div>
+            <div data-at="2.9" data-v="100"><span>DE</span></div>
+            <div data-at="4.4" data-v="100"><span>FR</span></div>
+            <div data-at="5.9" data-v="100"><span>PT</span></div>
+            <div data-at="7.4" data-v="100"><span>IT</span></div>
+            <div data-at="8.9" data-v="100"><span>NL</span></div>
+            <div data-at="10.4" data-v="100"><span>PL</span></div>
+            <div data-at="11.9" data-v="100"><span>SV</span></div>
+        </div>
+      </div>
+
+      </div>
+
+      <!-- Scenes: only the callout at the top changes. The last scene veils the dashboard for the end card. -->
+      <section class="scene" id="s0" data-at="0" data-len="3.8">
+        <h1 class="callout" data-fx="words" data-t="0.1">Drop in an <mark>.srt</mark> file</h1>
+      </section>
+      <section class="scene" id="s1" data-at="3.8" data-len="4.4">
+        <h2 class="callout" data-fx="words" data-t="0.1">Pick from <mark>30 languages</mark></h2>
+      </section>
+      <section class="scene" id="s2" data-at="8.2" data-len="3.8">
+        <h2 class="callout" data-fx="words" data-t="0.1">Timings stay <mark>the same</mark></h2>
+      </section>
+      <section class="scene" id="s3" data-at="12" data-len="3.8">
+        <h2 class="callout" data-fx="words" data-t="0.1">Names and numbers <mark>kept</mark></h2>
+      </section>
+      <section class="scene" id="s4" data-at="15.8" data-len="4.6">
+        <img src="assets/logo-light.svg" alt="Clipwing" style="position: absolute; left: 700px; top: 290px; width: 520px" data-fx="blur" data-t="0.4" data-layout-allow-occlusion />
+        <h2 class="callout" style="top: 480px; font-size: 72px" data-fx="words" data-t="0.6">Free SRT <mark>translator</mark></h2>
+        <div style="position: absolute; left: 0; right: 0; top: 620px; text-align: center" data-fx="rise" data-t="1.0"><span class="btn">clipwing.pro/srt-subtitle-translator</span></div>
+        <div style="position: absolute; left: 0; right: 0; top: 760px; text-align: center; font-size: 28px; color: var(--dim)" data-fx="fade" data-t="1.3">30 languages · same timings · no sign-up</div>
+      </section>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = HudDashboard.build();
+    </script>
+  </body>
+</html>
