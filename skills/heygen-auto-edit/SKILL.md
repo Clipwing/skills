@@ -20,6 +20,8 @@ strikes), no generated images. Real b-roll comes only from files the user gives 
   `playwright-core` into `~/.cache/heygen-auto-edit` on first use).
 - Word timings: `pip install faster-whisper` (downloads the model once), or a VTT / words JSON you already have.
   Optional `pip install opencv-python-headless` to find the face (otherwise the centre of the upper third is assumed).
+- The person matte: `pip install onnxruntime opencv-python-headless numpy` (`matte.py` downloads the RVM model, ~15 MB,
+  once from GitHub). Without it there are no words behind the head and the camera does not follow the face.
 - Music: a track or a folder of tracks the user is licensed to use. Never generate music.
 - Sound effects: the **real-sfx** skill with a sound library configured. Without it the film has voice + music only:
   say so.

@@ -54,11 +54,12 @@ const srv = http.createServer((q, r) => {
   r.writeHead(200, { 'content-type': TYPES[extname(f).toLowerCase()] || 'application/octet-stream', 'cache-control': 'max-age=3600' }); createReadStream(f).pipe(r);
 }).listen(0);
 await new Promise(r => srv.once('listening', r));
-const url = `http://localhost:${srv.address().port}/index.html?aspect=${encodeURIComponent(ASPECT)}`;
+const url = `http://localhost:${srv.address().port}/index.html?aspect=${encodeURIComponent(ASPECT)}${A.check ? '&check=1' : ''}`;
 
 const pw = await playwright();
 let exe = null; try { if (!existsSync(pw.chromium.executablePath())) exe = findChrome(); } catch { exe = findChrome(); }
-const ARGS = ['--font-render-hinting=none', '--disable-lcd-text', '--disable-gpu-vsync', '--force-color-profile=srgb'];
+// WebGL through SwiftShader: the same pixels on every machine, with or without a GPU
+const ARGS = ['--font-render-hinting=none', '--disable-lcd-text', '--disable-gpu-vsync', '--force-color-profile=srgb', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
 async function open() {
   const br = await pw.chromium.launch({ ...(exe ? { executablePath: exe } : {}), args: ARGS });
@@ -74,6 +75,21 @@ async function open() {
   const grab = async t => Buffer.from(await page.evaluate(async t => { await window.seek(t);
     return document.getElementById('c').toDataURL('image/jpeg', 0.93).slice(23); }, t), 'base64');
   return { br, page, grab, film };
+}
+
+// --check [step]: seek through the whole film without encoding and list every text that leaves the frame
+if (A.check) {
+  const P = await open(), step = Number(A.check) > 0 ? Number(A.check) : .2, bad = new Map();
+  for (let t = 0; t < P.film.duration; t += step) {
+    await P.page.evaluate(t => window.seek(t), t);
+    for (const s of await P.page.evaluate(() => window.BAD || [])) { const r = bad.get(s) || [t, t]; r[1] = t; bad.set(s, r); }
+  }
+  const beats = await P.page.evaluate(() => window.BEATS_INFO);
+  await P.br.close(); srv.close();
+  for (const [s, [a, b]] of bad) console.log(`TEXT OUT OF FRAME ${a.toFixed(1)}-${b.toFixed(1)} s: "${s}"`);
+  console.log(`[check] ${bad.size ? bad.size + ' text(s) leave the frame' : 'every text stays inside the frame'}; ${beats.length} beats`);
+  if (A.beats) writeFileSync(resolve(A.beats), JSON.stringify(beats, null, 1));
+  process.exit(bad.size ? 1 : 0);
 }
 
 if (A.stills) {

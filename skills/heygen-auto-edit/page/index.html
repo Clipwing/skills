@@ -7,12 +7,19 @@
   @font-face { font-family: Inter; font-weight: 700; src: url(fonts/Inter-700.woff2) format('woff2'); }
   @font-face { font-family: Inter; font-weight: 800; src: url(fonts/Inter-800.woff2) format('woff2'); }
   @font-face { font-family: Caslon; font-weight: 700; src: url(fonts/LibreCaslon-700.woff2) format('woff2'); }
+  @font-face { font-family: Head; font-weight: 800; src: url(fonts/Bricolage-800.woff2) format('woff2'); }
+  /* Instrument Serif has one weight: registered as 700 so titles never get a synthetic bold */
+  @font-face { font-family: Serif2; font-weight: 700; src: url(fonts/InstrumentSerif-400.woff2) format('woff2'); }
   html, body { margin: 0; background: #000; overflow: hidden; }
   canvas { display: block; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<script src="core.js"></script>
+<script src="presenter.js"></script>
+<script src="scenes.js"></script>
+<script src="over.js"></script>
 <script src="engine.js"></script>
 </body>
 </html>

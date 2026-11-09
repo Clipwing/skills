@@ -219,6 +219,7 @@ def main():
     ap.add_argument("--model", default="small.en", help="faster-whisper model (small.en, medium.en, large-v3 for non-English)")
     ap.add_argument("--max-pause", type=float, default=0.35, help="pauses longer than this are cut (s)")
     ap.add_argument("--pad", type=float, default=0.12, help="air kept around speech at each cut (s)")
+    ap.add_argument("--tail", type=float, default=0.8, help="air kept after the last word (s)")
     ap.add_argument("--no-cut", action="store_true", help="keep the take whole (only trim the head and tail)")
     ap.add_argument("--from", dest="t0", type=float, default=0.0); ap.add_argument("--to", dest="t1", type=float)
     ap.add_argument("--fps", type=float, help="output frame rate (default: the take's, at most 30)")
@@ -258,6 +259,8 @@ def main():
     else:
         ranges = keep_ranges(words, t1, a.max_pause, a.pad)
         ranges = [[max(r[0], a.t0), min(r[1], t1)] for r in ranges if r[1] > a.t0 and r[0] < t1]
+    # the last word trails off after whisper's end time: keep a breath of air so the presenter does not stop dead
+    ranges[-1][1] = round(max(ranges[-1][1], min(t1, words[-1]["e"] + a.tail)), 3)
     kept = sum(b - a_ for a_, b in ranges)
     print(f"[prepare] {len(ranges)} ranges kept, {kept:.1f} s of {t1 - a.t0:.1f} s ({t1 - a.t0 - kept:.1f} s of pauses cut)")
 

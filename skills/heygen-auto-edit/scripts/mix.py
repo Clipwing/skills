@@ -2,7 +2,7 @@
 """Put the sound under the rendered picture: the voice, background music ducked under it, optional SFX.
 
     python scripts/mix.py --video film.silent.mp4 --voice work/voice.wav --music track.mp3 --out film.mp4
-                          [--music-db -17] [--duck 9] [--sfx sfx_track.wav --sfx-db 0] [--lufs -14] [--music-start 0]
+                          [--music-db -24] [--duck 8] [--sfx sfx_track.wav --sfx-db 0] [--lufs -14] [--music-start 0]
 
 --music may be a folder: the track is picked by the film's length (the shortest track that covers it, otherwise the
 longest one, looped with a crossfade). The music sits --music-db under the voice and is pulled down a further --duck dB
@@ -37,8 +37,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--video", required=True); ap.add_argument("--voice", required=True)
     ap.add_argument("--music"); ap.add_argument("--music-start", type=float, default=0.0)
-    ap.add_argument("--music-db", type=float, default=-17.0, help="music level against the voice (dB)")
-    ap.add_argument("--duck", type=float, default=9.0, help="extra dB the music drops while the voice speaks")
+    ap.add_argument("--music-db", type=float, default=-24.0, help="music level against the voice (dB)")
+    ap.add_argument("--duck", type=float, default=8.0, help="extra dB the music drops while the voice speaks")
     ap.add_argument("--sfx"); ap.add_argument("--sfx-db", type=float, default=0.0)
     ap.add_argument("--lufs", type=float, default=-14.0)
     ap.add_argument("--out", required=True)
