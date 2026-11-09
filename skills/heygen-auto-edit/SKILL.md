@@ -35,7 +35,7 @@ python scripts/prepare.py TAKE.mp4 --out work --model large-v3     # not English
 python scripts/prepare.py TAKE.mp4 --out work --vtt captions.vtt   # timings you already have
 ```
 It cuts pauses longer than 0.35 s (`--max-pause`, `--no-cut` to keep the take whole), and writes `words.json`,
-`transcript.txt`, `base.mp4`, `voice.wav`, every frame as JPEG, `face.json`, `info.json`. HeyGen takes have clean
+`transcript.txt`, `voice.wav`, every frame as JPEG (colour-graded), `face.json`, `info.json` (`--base` adds a watchable `base.mp4`). HeyGen takes have clean
 audio and few fillers; a long take may still have long breaths between paragraphs: they go.
 
 Check `face.json` (`found` > 0, or look at one frame): the camera centres every zoom on it.

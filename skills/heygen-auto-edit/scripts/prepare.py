@@ -8,7 +8,7 @@ Writes into --out:
   words.json       every spoken word with its time on the EDITED timeline: [{"w","s","e"}]
   transcript.txt   the text in sentences with times, for writing the edit plan
   cut.json         which ranges of the take were kept (take time) and the edited duration
-  base.mp4         the take with long pauses removed (h264 + aac, constant frame rate)
+  base.mp4         (--base) the take with long pauses removed, to watch the cut
   voice.wav        its sound (48 kHz stereo), what mix.py puts under the music
   frames/          every frame of base.mp4 as JPEG (000001.jpg = t 0), what the renderer draws
   face.json        where the face is (0..1 of the frame): {"cx","cy","w","h"}; the camera centres on it
@@ -17,7 +17,7 @@ Writes into --out:
 Word times come from, in order: --words (a JSON list of {w,s,e} in take time), --vtt (YouTube-style VTT with
 <00:00:01.200><c> word</c> timings), or faster-whisper (pip install faster-whisper; downloads the model once).
 """
-import argparse, json, math, os, re, shutil, subprocess, sys
+import argparse, json, math, os, re, shutil, subprocess, sys, time
 from pathlib import Path
 
 
@@ -84,8 +84,13 @@ def words_from_whisper(path, model_name):
         from faster_whisper import WhisperModel
     except ImportError:
         sys.exit("no word timings: pass --vtt/--words, or `pip install faster-whisper` for transcription")
+    import numpy as np
+    # decode with ffmpeg ourselves: faster-whisper's own decoder (PyAV) breaks between versions
+    pcm = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-vn", "-ac", "1", "-ar", "16000", "-f", "f32le", "-"],
+                         capture_output=True, check=True).stdout
+    audio = np.frombuffer(pcm, dtype=np.float32)
     model = WhisperModel(model_name, device="cpu", compute_type="int8")
-    segments, info = model.transcribe(str(path), word_timestamps=True, vad_filter=True, beam_size=5)
+    segments, info = model.transcribe(audio, word_timestamps=True, vad_filter=True, beam_size=5)
     words = []
     for seg in segments:
         for w in seg.words or []:
@@ -127,8 +132,9 @@ def remap(t, ranges):
     return acc
 
 
-def cut_take(src, ranges, out, fps, info):
-    """Trim + concat with 12 ms audio fades at every join (no clicks). Constant frame rate output."""
+def cut_take(src, ranges, out, fps, info, jpeg_q, base=False):
+    """One decode of the take: trim + concat (12 ms audio fades at every join, no clicks), written straight to
+    frames/%06d.jpg at a constant frame rate and voice.wav; base.mp4 (a watchable cut) only when asked."""
     n = len(ranges)
     parts, labels = [], []
     for i, (a, b) in enumerate(ranges):
@@ -140,15 +146,25 @@ def cut_take(src, ranges, out, fps, info):
             labels.append(f"[v{i}][a{i}]")
         else:
             labels.append(f"[v{i}]")
-    parts.append("".join(labels) + f"concat=n={n}:v=1:a={1 if info['audio'] else 0}" + ("[v][a]" if info["audio"] else "[v]"))
-    graph = ";\n".join(parts)
-    gfile = Path(out).with_suffix(".filter.txt"); gfile.write_text(graph)
-    cmd = ["ffmpeg", "-v", "error", "-y", "-i", str(src), "-filter_complex_script", str(gfile), "-map", "[v]"]
+    parts.append("".join(labels) + f"concat=n={n}:v=1:a={1 if info['audio'] else 0}" + ("[vc][ac]" if info["audio"] else "[vc]"))
+    # the colour grade is baked in here once (cheaper than a canvas filter on every rendered frame)
+    parts.append(f"[vc]fps={fps},eq=contrast=1.06:saturation=1.08:brightness=0.004" + (",split=2[v][vb]" if base else "[v]"))
     if info["audio"]:
-        cmd += ["-map", "[a]", "-c:a", "aac", "-b:a", "192k", "-ar", "48000"]
-    cmd += ["-r", f"{fps}", "-c:v", "libx264", "-preset", "medium", "-crf", "16", "-pix_fmt", "yuv420p", str(out)]
+        parts.append("[ac]aresample=48000,aformat=channel_layouts=stereo" + (",asplit=2[a][ab]" if base else "[a]"))
+    graph = ";\n".join(parts)
+    frames = out / "frames"
+    shutil.rmtree(frames, ignore_errors=True); frames.mkdir()
+    # inline graph: -filter_complex_script is gone in ffmpeg 8 and the file form (-/filter_complex) is missing in 6
+    cmd = ["ffmpeg", "-v", "error", "-y", "-i", str(src), "-filter_complex", graph,
+           "-map", "[v]", "-q:v", str(jpeg_q), str(frames / "%06d.jpg")]
+    if info["audio"]:
+        cmd += ["-map", "[a]", "-c:a", "pcm_s16le", str(out / "voice.wav")]
+    if base:
+        cmd += ["-map", "[vb]"] + (["-map", "[ab]", "-c:a", "aac", "-b:a", "192k"] if info["audio"] else []) + \
+               ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", str(out / "base.mp4")]
     run(cmd)
-    gfile.unlink(missing_ok=True)
+    info["graded"] = True
+    return len(list(frames.glob("*.jpg")))
 
 
 # ---------------------------------------------------------------- face
@@ -159,7 +175,11 @@ def find_face(frames_dir, n_frames):
     except ImportError:
         print("[prepare] no opencv: face box guessed (centre, upper third); pip install opencv-python-headless")
         return None
-    casc = cv2.CascadeClassifier(os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml"))
+    try:
+        casc = cv2.CascadeClassifier(os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml"))
+    except AttributeError:
+        print("[prepare] this OpenCV has no Haar cascades (OpenCV 5): face box guessed; pass --face CX,CY if it is off")
+        return None
     boxes = []
     for k in range(12):
         idx = 1 + int((n_frames - 1) * (k + 0.5) / 12)
@@ -203,6 +223,8 @@ def main():
     ap.add_argument("--from", dest="t0", type=float, default=0.0); ap.add_argument("--to", dest="t1", type=float)
     ap.add_argument("--fps", type=float, help="output frame rate (default: the take's, at most 30)")
     ap.add_argument("--jpeg-q", type=int, default=3, help="ffmpeg -q:v for frames (2 best .. 5 smaller)")
+    ap.add_argument("--face", help="CX,CY of the face in the take (0..1), when detection is off or unavailable")
+    ap.add_argument("--base", action="store_true", help="also write base.mp4, the take with the pauses cut")
     a = ap.parse_args()
 
     src, out = Path(a.take).resolve(), Path(a.out).resolve()
@@ -211,12 +233,21 @@ def main():
     fps = a.fps or min(30.0, round(info["fps"]))
     t1 = min(a.t1 or info["duration"], info["duration"])
 
+    clock = time.monotonic(); timing = {}
+    def lap(name):
+        nonlocal clock
+        now = time.monotonic(); timing[name] = round(now - clock, 1); clock = now
+    raw = out / "words.raw.json"
     if a.words:
         words = json.loads(Path(a.words).read_text())
     elif a.vtt:
         words = words_from_vtt(a.vtt)
+    elif raw.exists() and json.loads(raw.read_text()).get("take") == str(src):
+        words = json.loads(raw.read_text())["words"]; print("[prepare] word timings reused from words.raw.json")
     else:
         words = words_from_whisper(src, a.model)
+        raw.write_text(json.dumps({"take": str(src), "words": words}, ensure_ascii=False))
+    lap("words")
     words = [w for w in words if a.t0 <= w["s"] < t1 and w["w"].strip()]
     if not words:
         sys.exit("no words found in the take")
@@ -230,8 +261,8 @@ def main():
     kept = sum(b - a_ for a_, b in ranges)
     print(f"[prepare] {len(ranges)} ranges kept, {kept:.1f} s of {t1 - a.t0:.1f} s ({t1 - a.t0 - kept:.1f} s of pauses cut)")
 
-    base = out / "base.mp4"
-    cut_take(src, ranges, base, fps, info)
+    n_frames = cut_take(src, ranges, out, fps, info, a.jpeg_q, a.base)
+    lap("cut + frames")
     edited = [{"w": w["w"], "s": round(remap(w["s"], ranges), 3), "e": round(remap(w["e"], ranges), 3)} for w in words]
     (out / "words.json").write_text(json.dumps(edited, ensure_ascii=False, indent=0))
     (out / "cut.json").write_text(json.dumps({"source": str(src), "ranges": ranges, "duration": round(kept, 3)}, indent=1))
@@ -239,19 +270,19 @@ def main():
         for s, e, text in sentences(edited):
             f.write(f"[{s:7.2f} - {e:7.2f}] {text}\n")
 
-    if info["audio"]:
-        run(["ffmpeg", "-v", "error", "-y", "-i", str(base), "-vn", "-ac", "2", "-ar", "48000", str(out / "voice.wav")])
     frames = out / "frames"
-    shutil.rmtree(frames, ignore_errors=True); frames.mkdir()
-    run(["ffmpeg", "-v", "error", "-y", "-i", str(base), "-q:v", str(a.jpeg_q), str(frames / "%06d.jpg")])
-    n_frames = len(list(frames.glob("*.jpg")))
-    bi = probe(base)
-    face = find_face(frames, n_frames) or {"cx": 0.5, "cy": 0.38, "w": 0.18, "h": 0.32, "found": 0}
+    if a.face:
+        cx, cy = (float(x) for x in a.face.split(","))
+        face = {"cx": cx, "cy": cy, "w": 0.12, "h": 0.2, "found": "given"}
+    else:
+        face = find_face(frames, n_frames) or {"cx": 0.5, "cy": 0.38, "w": 0.18, "h": 0.32, "found": 0}
+    lap("face")
     (out / "face.json").write_text(json.dumps(face, indent=1))
-    (out / "info.json").write_text(json.dumps({"width": bi["width"], "height": bi["height"], "fps": fps,
+    (out / "info.json").write_text(json.dumps({"width": info["width"], "height": info["height"], "fps": fps,
                                                "frames": n_frames, "duration": round(n_frames / fps, 3),
-                                               "take": str(src)}, indent=1))
-    print(f"[prepare] base {kept:.1f} s, {n_frames} frames, face {face}")
+                                               "take": str(src), "timing_s": timing}, indent=1))
+    print(f"[prepare] {kept:.1f} s, {n_frames} frames, face {face}")
+    print(f"[prepare] time: " + ", ".join(f"{k} {v} s" for k, v in timing.items()))
     print(f"[prepare] next: read {out / 'transcript.txt'} and write the edit plan (references/plan-format.md)")
 
 

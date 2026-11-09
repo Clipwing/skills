@@ -28,7 +28,7 @@ if (!existsSync(PLAN)) { console.error(`no plan ${PLAN}`); process.exit(2); }
 
 async function playwright() {
   let groot = ''; try { groot = execFileSync('npm', ['root', '-g'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch {}
-  for (const base of [HERE, WORK, join(os.homedir(), '.cache', 'heygen-auto-edit'), groot].filter(Boolean)) for (const name of ['playwright', 'playwright-core']) {
+  for (const base of [process.env.PLAYWRIGHT_DIR, HERE, WORK, join(os.homedir(), '.cache', 'heygen-auto-edit'), groot].filter(Boolean)) for (const name of ['playwright', 'playwright-core']) {
     try { const p = createRequire(join(base, 'noop.js')).resolve(name); const m = await import(pathToFileURL(p).href); return m.default ?? m; } catch {} }
   const cache = join(os.homedir(), '.cache', 'heygen-auto-edit'); log('installing playwright-core into', cache); mkdirSync(cache, { recursive: true });
   execFileSync('npm', ['i', '--prefix', cache, 'playwright-core@1.56.1'], { stdio: 'inherit' });
@@ -70,7 +70,9 @@ async function open() {
   const failed = await page.evaluate(() => window.__failed);
   if (failed) throw new Error(failed);
   const film = await page.evaluate(() => ({ duration: window.DURATION, fps: window.FPS, cues: window.CUES }));
-  const grab = async t => { await page.evaluate(t => window.seek(t), t); return page.screenshot({ type: 'jpeg', quality: 92, clip: { x: 0, y: 0, width: W, height: H }, animations: 'allow', caret: 'initial' }); };
+  // the canvas encodes its own JPEG: cheaper than a page screenshot (no compositor round trip)
+  const grab = async t => Buffer.from(await page.evaluate(async t => { await window.seek(t);
+    return document.getElementById('c').toDataURL('image/jpeg', 0.93).slice(23); }, t), 'base64');
   return { br, page, grab, film };
 }
 

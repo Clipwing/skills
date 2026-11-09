@@ -55,12 +55,17 @@ async function frame(i) {
 function layer() { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; }
 const L = { a: layer(), b: layer(), tmp: layer(), tmp2: layer() };
 const grainTiles = [];
+// full-frame grain layers, made once: one overlay draw per frame instead of dozens of tiles
 function makeGrain() {
+  const tile = document.createElement('canvas'); tile.width = tile.height = 256; const tg = tile.getContext('2d');
   for (let k = 0; k < 6; k++) {
-    const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
-    const d = g.createImageData(256, 256);
+    const d = tg.createImageData(256, 256);
     for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (hash(i * 13 + k * 99991) - .5) * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
-    g.putImageData(d, 0, 0); grainTiles.push(c);
+    tg.putImageData(d, 0, 0);
+    const c = layer(), g = c.getContext('2d'), sc = 2 * U;
+    g.imageSmoothingEnabled = true; g.scale(sc, sc);
+    for (let x = 0; x < W / sc; x += 256) for (let y = 0; y < H / sc; y += 256) g.drawImage(tile, x, y);
+    grainTiles.push(c);
   }
 }
 
@@ -133,8 +138,9 @@ async function drawPresenter(g, t, opt = {}) {
   x = clamp(x, W - dw - 4, 4) ; y = clamp(y, H - dh - 4, 4);      // never show an edge
   g.save();
   g.translate(W / 2, H / 2); g.rotate(rot); g.translate(-W / 2, -H / 2);
-  const grade = PLAN.vfx?.grade ?? 'contrast(1.06) saturate(1.08) brightness(1.01)';
-  g.filter = (opt.blur ? `blur(${opt.blur}px) ` : '') + (opt.dim ? `brightness(${1 - opt.dim}) ` : '') + grade;
+  // prepare.py bakes the default grade into the frames; a plan's own grade (or old frames) still goes through the filter
+  const grade = PLAN.vfx?.grade ?? (INFO.graded ? '' : 'contrast(1.06) saturate(1.08) brightness(1.01)');
+  g.filter = ((opt.blur ? `blur(${opt.blur}px) ` : '') + (opt.dim ? `brightness(${1 - opt.dim}) ` : '') + (grade === 'none' ? '' : grade)).trim() || 'none';
   g.drawImage(img, x - 2, y - 2, dw + 4, dh + 4);
   g.restore();
   if (!opt.noVignette && (PLAN.vfx?.vignette ?? true)) vignette(g, .28);
@@ -148,11 +154,13 @@ function vignette(g, a) {
 // ------------------------------------------------------------------ VFX
 function grain(g, t, amount) {
   if (!amount) return;
-  const f = Math.round(t * FPS), tile = grainTiles[f % grainTiles.length];
+  const f = Math.round(t * FPS), layerK = grainTiles[f % grainTiles.length];
+  const ox = Math.floor(hash(f * 3) * 256 * U), oy = Math.floor(hash(f * 5) * 256 * U);   // wraps around the frame
   g.save(); g.globalAlpha = amount; g.globalCompositeOperation = 'overlay';
-  const ox = Math.floor(hash(f * 3) * 256), oy = Math.floor(hash(f * 5) * 256);
-  const sc = 2 * U; g.translate(-ox, -oy); g.scale(sc, sc);
-  for (let x = 0; x < (W + 256) / sc; x += 256) for (let y = 0; y < (H + 256) / sc; y += 256) g.drawImage(tile, x, y);
+  g.drawImage(layerK, ox, oy, W - ox, H - oy, 0, 0, W - ox, H - oy);
+  if (ox) g.drawImage(layerK, 0, oy, ox, H - oy, W - ox, 0, ox, H - oy);
+  if (oy) g.drawImage(layerK, ox, 0, W - ox, oy, 0, H - oy, W - ox, oy);
+  if (ox && oy) g.drawImage(layerK, 0, 0, ox, oy, W - ox, H - oy, ox, oy);
   g.restore();
 }
 // horizontal smear: squeeze the layer to a narrow strip and stretch it back (smooth, cheap); amount 0..1
@@ -215,7 +223,7 @@ const SCENES = {
       lines.forEach((ln, i) => { const part = ln.slice(0, Math.max(0, left)); left -= ln.length + 1; g.fillText(part, W / 2 - (g.measureText(ln).width - g.measureText(part).width) / 2, y0 + i * size * 1.16); });
       if (b.sub) {
         const k = prog(t, b.start + text.length / (b.cps || 22), .45);
-        withReveal(g, k, () => { g.font = font(size * .32, 500); g.fillStyle = C.mute; g.fillText(b.sub, W / 2, y0 + lines.length * size * 1.16 + size * .1); });
+        withReveal(g, k, () => { g.font = font(Math.max(size * .32, (V ? 40 : 36) * U), 500); g.fillStyle = C.mute; g.fillText(b.sub, W / 2, y0 + lines.length * size * 1.16 + size * .1); });
       }
     });
   },
@@ -448,9 +456,16 @@ const OVER = {
       const at = it.at ?? (b.start + i * .6), k = prog(t, at, .3); if (k <= 0) return;
       const [main, sub] = String(it.text).split('\n');
       const pos = wordPos(it.pos || ['right', 'left', 'top-right', 'bottom-left'][i % 4], i);
-      const size = (it.size || (V ? 92 : 104)) * U;
+      let size = (it.size || (V ? 92 : 104)) * U;
+      // keep the whole word inside the frame: shrink a long one, then slide it in from the edge
+      const m = 56 * U; g.font = font(size, 800);
+      let tw = Math.max(g.measureText(main).width, sub ? (g.font = font(size * .42, 700), g.measureText(sub).width) : 0);
+      const room = pos.align === 'center' ? W - 2 * m : pos.align === 'right' ? pos.x - m : W - m - pos.x;
+      if (tw > Math.max(room, W * .3)) { size *= Math.max(room, W * .3) / tw; tw = Math.max(room, W * .3); }
+      let x0 = pos.align === 'right' ? pos.x - tw : pos.align === 'center' ? pos.x - tw / 2 : pos.x;
+      const shift = Math.max(0, m - x0) - Math.max(0, x0 + tw - (W - m));
       g.save(); g.globalAlpha = out * clamp(k * 2);
-      const s = lerp(1.25, 1, eOut(k)); g.translate(pos.x, pos.y); g.scale(s, s); g.rotate((it.rot || 0) * Math.PI / 180);
+      const s = lerp(1.25, 1, eOut(k)); g.translate(pos.x + shift, pos.y); g.scale(s, s); g.rotate((it.rot || 0) * Math.PI / 180);
       const bl = (1 - eOut(k)) * 12 * U; if (bl > .3) g.filter = `blur(${bl.toFixed(1)}px)`;
       g.textAlign = pos.align; g.textBaseline = 'alphabetic';
       g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 24 * U; g.shadowOffsetY = 4 * U;
