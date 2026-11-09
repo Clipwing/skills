@@ -80,13 +80,13 @@ async function open() {
 // --check [step]: seek through the whole film without encoding and list every text that leaves the frame
 if (A.check) {
   const P = await open(), step = Number(A.check) > 0 ? Number(A.check) : .2, bad = new Map();
-  for (let t = 0; t < P.film.duration; t += step) {
+  for (let t = Number(A.from) || 0; t < Math.min(P.film.duration, Number(A.to) || 1e9); t += step) {
     await P.page.evaluate(t => window.seek(t), t);
-    for (const s of await P.page.evaluate(() => window.BAD || [])) { const r = bad.get(s) || [t, t]; r[1] = t; bad.set(s, r); }
+    for (const [s, box] of await P.page.evaluate(() => window.BAD || [])) { const r = bad.get(s) || [t, t, box]; r[1] = t; bad.set(s, r); }
   }
   const beats = await P.page.evaluate(() => window.BEATS_INFO);
   await P.br.close(); srv.close();
-  for (const [s, [a, b]] of bad) console.log(`TEXT OUT OF FRAME ${a.toFixed(1)}-${b.toFixed(1)} s: "${s}"`);
+  for (const [s, [a, b, box]] of bad) console.log(`TEXT OUT OF FRAME ${a.toFixed(1)}-${b.toFixed(1)} s: "${s}" (at ${box})`);
   console.log(`[check] ${bad.size ? bad.size + ' text(s) leave the frame' : 'every text stays inside the frame'}; ${beats.length} beats`);
   if (A.beats) writeFileSync(resolve(A.beats), JSON.stringify(beats, null, 1));
   process.exit(bad.size ? 1 : 0);

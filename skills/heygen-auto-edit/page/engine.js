@@ -156,7 +156,7 @@ function captions(g, t, hide) {
 // ------------------------------------------------------------------ one frame
 async function seek(t) {
   t = clamp(t, 0, DUR - 1e-3);
-  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.filter = 'none'; ctx.globalAlpha = 1; ctx.canvas.__boxes = [];
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.filter = 'none'; ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'; ctx.setLineDash([]); ctx.canvas.__boxes = [];
   const active = fullAt(t);
   let drawn = false, inTransition = false;
   for (const b of active) {
@@ -176,7 +176,7 @@ async function seek(t) {
   if (PLAN.captions?.enabled ?? V) { const cur = active.find(x => t >= x.start && t < x.end); captions(ctx, t, cur && !['photo', 'video', 'image'].includes(cur.type)); }
   grain(ctx, t, PLAN.vfx?.grain ?? .06);
   if (CHECK) {   // text that leaves the frame (or sits within 12 px of its edge) while it is readable
-    const m = 12 * U; window.BAD = inTransition ? [] : (ctx.canvas.__boxes || []).filter(b => b.a > .35).filter(b => b.pts.some(([x, y]) => x < m || x > W - m || y < m || y > H - m)).map(b => b.s);
+    const m = 12 * U; window.BAD = inTransition ? [] : (ctx.canvas.__boxes || []).filter(b => b.a > .35).filter(b => b.pts.some(([x, y]) => x < m || x > W - m || y < m || y > H - m)).map(b => { const xs = b.pts.map(p => p[0]), ys = b.pts.map(p => p[1]); return [b.s, [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)].map(v => Math.round(v)).join(',')]; });
   }
 }
 

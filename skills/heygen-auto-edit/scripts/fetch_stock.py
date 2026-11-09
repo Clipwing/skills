@@ -4,8 +4,8 @@
     python scripts/fetch_stock.py --plan work/edit.json            # candidates for every beat with a "query"
     python scripts/fetch_stock.py --plan work/edit.json --credits  # work/credits.txt for the files the plan uses
 
-Photos come from Openverse (CC0, public domain, CC BY, CC BY-SA; commercial use allowed), clips from Wikimedia Commons
-(free licences). For each beat with a `query` (or a list of `queries`, one per print) and no `src`, up to --n candidates land in work/stock/<beat>/ with a
+Photos come from Openverse (CC0, public domain, CC BY, CC BY-SA; commercial use allowed) or Wikimedia Commons, clips
+from Wikimedia Commons (free licences). For each beat with a `query` (or a list of `queries`, one per print) and no `src`, up to --n candidates land in work/stock/<beat>/ with a
 contact sheet (left to right, top to bottom: c1, c2, ...) work/stock/<beat>/sheet.jpg. Look at the sheets, then set the beat's `src` (or `srcs`) to the
 chosen file, e.g. "stock/b07/c2.jpg" (paths are relative to the plan). A clip becomes an image sequence
 (stock/b07/v1/00001.jpg ... + seq.json) of --clip seconds from its middle (or from the beat's `offset`).
@@ -48,6 +48,32 @@ def openverse(q, n):
     return out
 
 
+def commons_images(q, n):
+    """Wikimedia Commons photos (the fallback when Openverse is down or finds nothing)."""
+    url = "https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode({
+        "action": "query", "format": "json", "generator": "search", "gsrnamespace": 6, "gsrsearch": f"{q} filetype:bitmap", "gsrlimit": 40,
+        "prop": "imageinfo", "iiprop": "url|size|mime|extmetadata", "iiurlwidth": 2400, "iiextmetadatafilter": "Artist|LicenseShortName"})
+    pages = sorted(get_json(url).get("query", {}).get("pages", {}).values(), key=lambda p: p.get("index", 99))
+    out = []
+    for p in pages:
+        ii = (p.get("imageinfo") or [{}])[0]
+        if (ii.get("width") or 0) < 1600 or ii.get("mime") not in ("image/jpeg", "image/png"):
+            continue
+        md = ii.get("extmetadata", {})
+        out.append({"url": ii.get("thumburl") or ii["url"], "title": p["title"], "author": re.sub("<[^>]+>", "", md.get("Artist", {}).get("value", "unknown")).strip(),
+                    "license": md.get("LicenseShortName", {}).get("value", ""), "page": ii.get("descriptionurl", ""), "w": ii.get("width"), "h": ii.get("height")})
+        if len(out) >= n: break
+    return out
+
+
+def photos(q, n):
+    try:
+        found = openverse(q, n)
+    except Exception as e:
+        print(f"[stock] Openverse: {e}; trying Wikimedia Commons"); found = []
+    return found if len(found) >= 3 else found + commons_images(q, n - len(found))
+
+
 def commons_videos(q, n):
     url = "https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode({
         "action": "query", "format": "json", "generator": "search", "gsrnamespace": 6, "gsrsearch": f"{q} filetype:video", "gsrlimit": 40,
@@ -86,6 +112,7 @@ def main():
     ap.add_argument("--clip", type=float, default=6.0, help="seconds of each clip kept as frames")
     ap.add_argument("--fps", type=float, default=25)
     ap.add_argument("--credits", action="store_true")
+    ap.add_argument("--again", action="store_true", help="search again for beats that already have candidates")
     a = ap.parse_args()
     plan_path = Path(a.plan); plan = json.loads(plan_path.read_text()); base = plan_path.parent
     stock = base / "stock"; stock.mkdir(exist_ok=True)
@@ -108,8 +135,10 @@ def main():
         jobs += [(f"b{i:02d}" + (f"-{j + 1}" if len(qs) > 1 else ""), b, q) for j, q in enumerate(qs)]
     for tag, b, q in jobs:
         d = stock / tag; d.mkdir(exist_ok=True)
+        if (d / "sheet.jpg").exists() and not a.again:
+            print(f"[stock] {tag}: candidates already there ({d / 'sheet.jpg'})"); continue
         try:
-            found = openverse(q, a.n) if b["type"] == "photo" else commons_videos(q, a.n)
+            found = photos(q, a.n) if b["type"] == "photo" else commons_videos(q, a.n)
         except Exception as e:
             print(f"[stock] {tag} \"{q}\": search failed ({e})"); continue
         files = []

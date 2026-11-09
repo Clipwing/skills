@@ -338,12 +338,12 @@ const SCENES = {
   // a whiteboard in perspective: hub with a pulse, curved branches drawing out to coloured pills (icon, small sub line)
   mindmap(g, t, b) {
     stage(g, t, b, { palette: 'cool', bg: '#EEF0F4', texture: .1 });
-    const bw = W * 1.0, bh = H * 1.0, c = clear(L.card); cardBase(c, bw, bh, { r: 36 * U, fill: '#FFFFFF' });
+    const bw = W * .9, bh = H * .84, c = clear(L.card); cardBase(c, bw, bh, { r: 36 * U, fill: '#FFFFFF' });
     c.save(); c.fillStyle = 'rgba(30,40,60,.08)'; const sp = 40 * U; for (let x = sp; x < bw; x += sp) for (let y = sp; y < bh; y += sp) { c.beginPath(); c.arc(x, y, 2 * U, 0, Math.PI * 2); c.fill(); } c.restore();
     const nodes = b.nodes || [], cx = bw / 2, cy = bh / 2, hubR = (V ? 170 : 160) * U;
-    const fs = (V ? 50 : 48) * U, pos = nodes.map((n, i) => {
+    const fs = (V ? 54 : 56) * U, pos = nodes.map((n, i) => {
       const ang = (n.angle ?? (-90 + 360 * i / nodes.length + (nodes.length % 2 ? 0 : 45))) * DEG;
-      return [cx + Math.cos(ang) * bw * (V ? .3 : .33), cy + Math.sin(ang) * bh * (V ? .32 : .31)];
+      return [cx + Math.cos(ang) * bw * (V ? .3 : .3), cy + Math.sin(ang) * bh * (V ? .34 : .32)];
     });
     nodes.forEach((n, i) => {
       const at = n.at ?? (b.start + .5 + i * .8), k = prog(t, at, .5); if (k <= 0) return;
@@ -371,7 +371,7 @@ const SCENES = {
     c.fillStyle = hg; c.beginPath(); c.arc(0, 0, hubR, 0, Math.PI * 2); c.fill(); noShadow(c);
     const hf = fitWrap(c, b.center || '', hubR * 1.5, 50 * U, 800, SANS, 3); c.font = font(hf.size, 800); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
     hf.lines.forEach((ln, i, a) => txt(c, ln, 0, (i - (a.length - 1) / 2) * hf.size * 1.1)); c.restore();
-    gl3d(g, G => drawCard(G, L.card, bw, bh, pose(t, b, { s: .9, rxFrom: 24, rx: 10, ryFrom: -10, ry: -2, dolly: 120, shadow: .22 })));
+    gl3d(g, G => drawCard(G, L.card, bw, bh, pose(t, b, { s: 1, rxFrom: 22, rx: 8, ryFrom: -10, ry: -2, dolly: 100, shadow: .22 })));
     foreground(g, t, b, { palette: 'cool' });
   },
 
@@ -447,32 +447,32 @@ const SCENES = {
   // roadmap: a path with stops; the progress line runs to the stop being named and the camera tracks along it
   roadmap(g, t, b) {
     stage(g, t, b, { palette: 'warm' });
-    const steps = b.steps || [], n = steps.length, sp = (V ? 420 : 520) * U, bw = Math.max(W, sp * (n - 1) + 700 * U), bh = H * .78, c = clear(L.card);
-    const y = bh * .5, x0 = 350 * U, xs = steps.map((s, i) => x0 + i * sp);
-    if (b.title) withReveal(c, prog(t, b.start, .45), () => { const f = fitWrap(c, b.title, W * .7, 56 * U, 800, SANS, 1); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'middle'; txt(c, f.lines[0], x0 - 60 * U, 80 * U); });
+    const steps = b.steps || [], n = steps.length, sp = Math.min(520 * U, W * .78 / Math.max(1, n - 1)), bw = W, bh = H * .78, c = clear(L.card);
+    const y = bh * .55, x0 = (W - sp * (n - 1)) / 2, xs = steps.map((s, i) => x0 + i * sp);
+    if (b.title) withReveal(c, prog(t, b.start, .45), () => { const f = fitWrap(c, b.title, W * .7, 72 * U, 800, SANS, 1); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'middle'; txt(c, f.lines[0], Math.max(90 * U, x0 - 60 * U), 110 * U); });
     const cur = steps.reduce((a, s, i) => t >= (s.at ?? (b.start + .5 + i * 1)) ? i : a, -1);
     const lineK = cur < 0 ? 0 : cur + eOut(prog(t, steps[cur].at ?? (b.start + .5 + cur), .6)) - 1;
     c.strokeStyle = '#DDD7CE'; c.lineWidth = 10 * U; c.lineCap = 'round'; c.setLineDash([2 * U, 22 * U]); c.beginPath(); c.moveTo(xs[0], y); c.lineTo(xs[n - 1], y); c.stroke(); c.setLineDash([]);
     if (lineK > 0) { c.strokeStyle = b.color || C.accent; c.beginPath(); c.moveTo(xs[0], y); c.lineTo(lerp(xs[0], xs[n - 1], lineK / Math.max(1, n - 1)), y); c.stroke(); }
     steps.forEach((s, i) => {
       const at = s.at ?? (b.start + .5 + i * 1), k = prog(t, at, .45), on = k > 0, x = xs[i], active = i === cur;
-      const r = (active ? 54 : 44) * U * (on ? lerp(.85, 1, eBack(k)) : .85);
+      const r = (active ? 66 : 54) * U * (on ? lerp(.85, 1, eBack(k)) : .85);
       c.save(); shadow(c, 20 * U, 8 * U, on ? .18 : .06); c.fillStyle = on ? (s.color || (active ? (b.color || C.accent) : C.ink)) : '#fff'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); noShadow(c);
       if (!on) { c.strokeStyle = '#D5CFC6'; c.lineWidth = 4 * U; c.stroke(); }
       c.font = font(r * .8, 800); c.fillStyle = on ? '#fff' : C.mute; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(s.icon || String(i + 1), x, y + 2 * U);
       if (active) { const pl = ((t - at) % 1.4) / 1.4; c.strokeStyle = hexA(b.color || C.accent, .4 * (1 - pl)); c.lineWidth = 5 * U; c.beginPath(); c.arc(x, y, r * (1 + pl * .7), 0, Math.PI * 2); c.stroke(); }
       c.restore();
       c.save(); c.globalAlpha = lerp(.4, 1, eOut(k)); const bl = (1 - eOut(k)) * 6 * U; if (bl > .3) c.filter = `blur(${bl.toFixed(1)}px)`;
-      const up = i % 2 === 0, f = fitWrap(c, s.text, sp * .9, 40 * U, 800, SANS, 2); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'center'; c.textBaseline = 'middle';
+      const up = i % 2 === 0, f = fitWrap(c, s.text, Math.min(sp * 1.6, 2 * Math.min(xs[i], W - xs[i]) - 40 * U), 50 * U, 800, SANS, 2); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'center'; c.textBaseline = 'middle';
       const ty = up ? y - 100 * U - (f.lines.length - 1) * f.size * 1.1 : y + 100 * U;
       f.lines.forEach((l, li) => txt(c, l, x, ty + li * f.size * 1.1));
-      if (s.label) { c.font = font(26 * U, 700); c.fillStyle = C.mute; txt(c, s.label, x, up ? ty - 50 * U : ty + f.lines.length * f.size * 1.1 + 14 * U); }
+      if (s.label) { c.font = font(32 * U, 700); c.fillStyle = C.mute; txt(c, s.label, x, up ? ty - 50 * U : ty + f.lines.length * f.size * 1.1 + 14 * U); }
       c.restore();
     });
-    // the camera keeps the current stop near the middle
+    // the whole road fits the frame; the camera only leans a little towards the stop being named
     const focus = cur < 0 ? xs[0] : lerp(xs[Math.max(0, cur - 1)], xs[cur], eIO(prog(t, steps[cur].at ?? b.start, .8)));
-    const off = clamp(focus - W / 2, 0, Math.max(0, bw - W));
-    gl3d(g, G => G.plane(L.card, pose(t, b, { w: bw, h: bh, src: [0, 0, bw / L.card.width, bh / L.card.height], x: W / 2 + (bw / 2 - W / 2) - off, y: H / 2, ryFrom: -20, ry: -8, rxFrom: 16, rx: 10, dolly: 60 })));
+    const lean = (focus - W / 2) / W;
+    gl3d(g, G => G.plane(L.card, pose(t, b, { w: bw, h: bh, src: [0, 0, bw / L.card.width, bh / L.card.height], x: W / 2 - lean * 60 * U, y: H / 2, ryFrom: -20, ry: -6 + lean * 6, rxFrom: 16, rx: 8, s: .94, dolly: 50 })));
     foreground(g, t, b);
   },
 

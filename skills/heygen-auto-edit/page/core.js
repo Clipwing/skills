@@ -70,7 +70,10 @@ async function seqFrame(src, t) {
 
 // ------------------------------------------------------------------ layers
 function layer(w = W, h = H) { const c = document.createElement('canvas'); c.width = Math.ceil(w); c.height = Math.ceil(h); return c; }
-function clear(c) { const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = 'none'; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, c.width, c.height); c.__boxes = []; return g; }
+function clear(c) { const g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = 'none'; g.globalCompositeOperation = 'source-over';
+  // canvas state survives between frames: reset what scenes set, or a seek order changes the picture
+  g.textAlign = 'left'; g.textBaseline = 'alphabetic'; g.shadowBlur = 0; g.shadowOffsetX = g.shadowOffsetY = 0; g.shadowColor = 'transparent'; g.setLineDash([]); g.lineCap = 'butt'; g.lineJoin = 'miter'; g.lineWidth = 1;
+  g.clearRect(0, 0, c.width, c.height); c.__boxes = []; return g; }
 const L = { a: layer(), b: layer(), tmp: layer(), tmp2: layer(), cut: layer(), card: layer(), card2: layer(), card3: layer(), ui: layer(), fx: layer() };
 const pools = new Map();
 function scratch(key, w, h) {   // a reusable canvas of a given size
@@ -235,8 +238,9 @@ void main(){ vec4 c = texture(T, uv);
     // the four screen corners of a plane, without drawing it (layout)
     bounds(o) { const Mw = model(o); return [[0, 0], [1, 0], [0, 1], [1, 1]].map(([u, v]) => project(Mw, u, v)); },
     // solid extrusion: the same plane repeated behind itself, darker with depth (3D letters, thick cards)
-    extrude(src, o, depth, n = 10, col = [0, 0, 0]) {
-      for (let i = n; i >= 1; i--) { const k = i / n; this.plane(src, { ...o, z: (o.z || 0) + depth * k, tint: [col[0], col[1], col[2], .55 + .35 * k], static: true }); }
+    // (an oblique offset down-right makes the sides read even when the plane faces the camera)
+    extrude(src, o, depth, n = 10, col = [0, 0, 0], ox = 0, oy = 0) {
+      for (let i = n; i >= 1; i--) { const k = i / n; this.plane(src, { ...o, x: o.x + ox * k, y: o.y + oy * k, z: (o.z || 0) + depth * k, tint: [col[0], col[1], col[2], .5 + .4 * k], static: true }); }
     },
     flush(g, alpha = 1) {
       g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = alpha; g.drawImage(c, 0, 0); g.restore();

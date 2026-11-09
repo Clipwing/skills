@@ -50,12 +50,14 @@ const OVER = {
         b._pl[i] = { u: (sx - xa.x) / xa.s, v: (sy - xa.y) / xa.s, s: xa.s, size, side, depth };
       }
       const pl = b._pl[i], k = xf.s / pl.s, size = pl.size;
-      const col = it.color || '#FFFFFF', wc = wordCanvas(b.i + '_' + i, main, sub, size, col, t, at, b.end);
+      const col = it.color || '#FFFFFF', wc = wordCanvas(b.i + '_' + i, main, sub, size, col, t, at, Math.min(b.end, items[i + 2]?.at ?? b.end));
       let x = xf.x + pl.u * xf.s, y = xf.y + pl.v * xf.s;
-      const ki = eSpring(prog(t, at, .7)), ko = eIn(prog(t, b.end - .35, .35));
+      const leave = Math.min(b.end, items[i + 2] ? (items[i + 2].at ?? (b.start + (i + 2) * .6)) : b.end);
+      if (t >= leave) return;
+      const ki = eSpring(prog(t, at, .7)), ko = eIn(prog(t, leave - .35, .35));
       const ryT = (it.ry ?? pl.side * -16), o = {
         w: wc.w, h: wc.h, ax: pl.side < 0 ? 1 : pl.side > 0 ? 0 : .5, ay: .62, x, y,
-        z: lerp(420, 0, ki) + ko * 500 + (pl.depth === 'behind' ? 0 : -60), ry: lerp(ryT + pl.side * 60, ryT, ki) - ko * pl.side * 30, rx: lerp(-25, 4, ki), rz: it.rz ?? pl.side * -1.5,
+        z: lerp(-320, 0, ki) + ko * 500 + (pl.depth === 'behind' ? 0 : -60), ry: lerp(ryT - pl.side * 25, ryT, ki) - ko * pl.side * 30, rx: lerp(-25, 4, ki), rz: it.rz ?? pl.side * -1.5,
         s: k * (it.scale ?? 1), alpha: clamp(ki * 3) * (1 - ko),
       };
       // keep the whole word inside the frame (never cut by the edge): measured at its resting pose, then the same
@@ -68,12 +70,21 @@ const OVER = {
         const dx = Math.max(0, m - Math.min(...xs)) - Math.max(0, Math.max(...xs) - (W - m)), dy = Math.max(0, m - Math.min(...ys)) - Math.max(0, Math.max(...ys) - (H - m));
         rest.x += dx; rest.y += dy; o.x += dx; o.y += dy;
       }
+      // not on top of the word placed before it: move it down (or up) out of the way, once, at placement time
+      const bd = GL.bounds(rest), r = [Math.min(...bd.map(p => p[0])), Math.min(...bd.map(p => p[1])), Math.max(...bd.map(p => p[0])), Math.max(...bd.map(p => p[1]))];
+      if (pl.dy === undefined) {
+        pl.dy = 0;
+        for (let j = Math.max(0, i - 1); j < i; j++) { const q = b._pl[j]?.rect; if (!q) continue;
+          if (r[0] < q[2] && q[0] < r[2] && r[1] + pl.dy < q[3] && q[1] < r[3] + pl.dy) { const down = q[3] - (r[1] + pl.dy) + 24 * U, up = (r[3] + pl.dy) - q[1] + 24 * U; pl.dy += (r[3] + down < H - m) ? down : -up; } }
+        pl.rect = [r[0], r[1] + pl.dy, r[2], r[3] + pl.dy];
+      }
+      o.y += pl.dy;
       (pl.depth === 'behind' ? behindAny : front).push({ wc, o, key: b.i + '_' + i });
     });
     const draw = list => gl3d(g, G => list.forEach(({ wc, o, key }) => {
       const sh = blurred(key, wc.c, 10 * U);
       G.plane(sh, { ...o, x: o.x + 10 * U, y: o.y + 16 * U, z: o.z + 30, tint: [0, 0, 0, 1], alpha: o.alpha * .45 });
-      G.extrude(wc.c, o, 26, 9, [.16, .17, .2]);
+      G.extrude(wc.c, o, 30, 12, [.2, .2, .24], 3.5 * U * o.s, 6 * U * o.s);
       G.plane(wc.c, o);
     }));
     if (behindAny.length) { draw(behindAny); if (await presenterCutout(t, xf)) blit(g, L.cut, 0, 0); }
