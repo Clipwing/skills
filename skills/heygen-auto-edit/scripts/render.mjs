@@ -7,7 +7,8 @@
 //
 // WORK is prepare.py's folder (frames/, words.json, face.json, info.json). Images named in the plan are looked up next
 // to the plan file. --stills writes JPEGs into WORK/stills-<aspect>/ instead of a film. --scale renders smaller (a fast
-// preview: 0.5 = 960x540 / 540x960). --cues writes the typed sound cue list for real-sfx.
+// preview: 0.5 = 960x540 / 540x960). --cues writes the typed sound cue list for real-sfx. A whole film also gets
+// <out>.plan.json, the plan it was made from (scripts/patch.mjs re-renders only what changed against it).
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync, rmSync, createReadStream, readFileSync, statSync } from 'node:fs';
 import { join, resolve, dirname, extname, normalize } from 'node:path';
@@ -77,6 +78,12 @@ async function open() {
   return { br, page, grab, film };
 }
 
+// --timeline FILE: the resolved timeline (beats with their real start/end/transitions, framing cuts) for patch.mjs
+if (A.timeline) {
+  const P = await open(); writeFileSync(resolve(A.timeline), JSON.stringify(await P.page.evaluate(() => window.TIMELINE)));
+  await P.br.close(); srv.close(); process.exit(0);
+}
+
 // --check [step]: seek through the whole film without encoding and list every text that leaves the frame
 if (A.check) {
   const P = await open(), step = Number(A.check) > 0 ? Number(A.check) : .2, bad = new Map();
@@ -101,7 +108,7 @@ if (A.stills) {
 const out = resolve(A.out || join(WORK, `film-${ASPECT.replace(':', 'x')}.silent.mp4`)), started = Date.now();
 const probe = await open(), film = probe.film, FPS = Number(A.fps || film.fps || 30);
 const T0 = Number(A.from || 0), T1 = Math.min(Number(A.to || film.duration), film.duration);
-const FRAMES = Math.round((T1 - T0) * FPS);
+const F0 = Math.round(T0 * FPS), FRAMES = Math.round(T1 * FPS) - F0;   // whole frames: a piece lines up with the full film
 if (A.cues) writeFileSync(resolve(A.cues), JSON.stringify(film.cues, null, 1));
 const N = Math.max(1, Math.min(Number(A.workers || Math.max(1, Math.min(6, Math.floor(os.cpus().length / 2)))), Math.ceil(FRAMES / 90)));
 log(`${N} workers, ${FRAMES} frames at ${FPS} fps (${(T1 - T0).toFixed(1)} s), ${W * SCALE}x${H * SCALE}`);
@@ -114,7 +121,7 @@ async function work(k) {
     '-c:v', 'libx264', '-preset', A.preset || 'medium', '-crf', String(A.crf || 19), '-pix_fmt', 'yuv420p', '-r', String(FPS), file], { stdio: ['pipe', 'inherit', 'inherit'] });
   const closed = new Promise((res, rej) => ff.on('close', c => c ? rej(new Error('ffmpeg exit ' + c)) : res()));
   for (let f = f0; f < f1; f++) {
-    const buf = await P.grab(T0 + f / FPS);
+    const buf = await P.grab((F0 + f) / FPS);
     if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
     done++;
     if (Date.now() - lastLog > 15000) { lastLog = Date.now(); const s = (Date.now() - started) / 1000; log(`${done}/${FRAMES} frames, ${(done / s).toFixed(1)} fps`); }
@@ -125,4 +132,6 @@ await Promise.all(Array.from({ length: N }, (_, k) => work(k)));
 const list = join(tmp, 'list.txt'); writeFileSync(list, parts.map(p => `file '${p.replace(/'/g, "'\\''")}'`).join('\n'));
 execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', out]);
 rmSync(tmp, { recursive: true, force: true }); srv.close();
+// a whole film keeps the plan it was made from: patch.mjs re-renders only what changes against it
+if (!A.from && !A.to) writeFileSync(out.replace(/\.mp4$/, '') + '.plan.json', readFileSync(PLAN));
 log(`done: ${out} in ${((Date.now() - started) / 1000).toFixed(0)} s`);

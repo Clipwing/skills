@@ -30,7 +30,7 @@ function buildBeats() {
   if (full[0] && full[0].start < 1) full[0].start = 0;
   // the end screen
   if (PLAN.endscreen !== false && !full.some(b => b.type === 'endscreen')) {
-    const es = { type: 'endscreen', ...(PLAN.endscreen || {}), i: 999 };
+    const es = { type: 'endscreen', ...(PLAN.endscreen || {}), i: 999, out: 'end' };   // the film ends on it: no way out
     es.start = SPEECH_END + (es.hold ?? .5); es.end = es.start + (es.dur || 4.5);
     const last = full[full.length - 1]; if (last && last.end > es.start - MIN_SHOT) { last.end = Math.min(last.end, es.start); if (es.start - last.end < MIN_SHOT) last.end = es.start; }
     full.push(es); beats.push(es);
@@ -256,6 +256,7 @@ async function loadBrand() {
     for (const [w, fam] of [[800, SANS], [700, SANS], [600, SANS], [500, SANS], [700, SERIF], [900, ROOM]]) await document.fonts.load(font(40, w, fam));
     makeSprites(); buildTalk(); buildBeats(); buildCaptions();
     window.DURATION = DUR; window.FPS = FPS; window.CUES = buildCues(); window.seek = seek; window.ASPECT = ASPECT;
+    window.TIMELINE = { duration: DUR, fps: FPS, beats: BEATS.map(b => ({ i: b.i, type: b.type, start: b.start, end: b.end, in: b.in, out: b.out, full: !!b._full })), talk: TALK };
     window.BEATS_INFO = BEATS.filter(b => b._full || b.type === 'words').map(b => ({ type: b.type, start: b.start, end: b.end, in: b.in, out: b.out }));
     await seek(0);
     window.__ready = true;

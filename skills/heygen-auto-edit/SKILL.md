@@ -119,6 +119,18 @@ Give the user the final MP4s, a contact sheet of frames, the time each step took
 (`work/credits.txt`), which music track was used and that the SFX came from their library. Mention anything you could
 not do (no face found, no matte, no stock key, no SFX library, no music).
 
+### 8. Changes after delivery: patch, do not re-render
+When the user asks to change a scene, edit `work/edit.json` (only the beats, framings or accents that change), then:
+```
+node scripts/patch.mjs --work work --plan work/edit.json --film work/film-16x9.silent.mp4 --cues work/cues.json --dry
+node scripts/patch.mjs --work work --plan work/edit.json --film work/film-16x9.silent.mp4 --cues work/cues.json
+```
+`--dry` lists the stretches that will be re-rendered and why; check that they are only the scenes you meant to change.
+The new frames replace the old ones in the silent film (the old film stays as `.prev.mp4`); then run steps 5–6
+again (sound takes a few minutes). Unchanged cards keep their transitions. A change to the film's length or to `vfx`,
+`endscreen` or the brand needs a whole render (step 4): `patch.mjs` says so. Report how much of the film was
+re-rendered and how long it took.
+
 ## Always
 
 - Never cover the face with a card edge, words or a caption, and never hide a word behind the head: the engine
