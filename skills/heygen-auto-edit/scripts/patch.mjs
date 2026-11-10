@@ -99,9 +99,9 @@ merged.forEach(([a, b], k) => {
 graph += `[o${merged.length}]trim=start_frame=${at},setpts=PTS-STARTPTS[z];`; parts.push('[z]');
 graph += `${parts.join('')}concat=n=${parts.length}:v=1:a=0[v]`;
 const tmpOut = STEM + '.patched.mp4';
-execFileSync('ffmpeg', ['-v', 'error', '-y', ...inputs, '-filter_complex', graph, '-map', '[v]', '-c:v', 'libx264', '-preset', A.preset || 'medium',
+execFileSync('ffmpeg', ['-v', 'error', '-y', ...inputs, '-filter_complex', graph, '-map', '[v]', '-c:v', 'libx264', '-preset', A.preset || 'fast',
   '-crf', String(A.crf || 19), '-pix_fmt', 'yuv420p', '-r', String(fps), '-movflags', '+faststart', tmpOut], { stdio: 'inherit' });
-const got = Number(execFileSync('ffprobe', ['-v', 'error', '-count_packets', '-select_streams', 'v:0', '-show_entries', 'stream=nb_read_packets', '-of', 'csv=p=0', tmpOut]).toString().trim());
+const got = parseInt((execFileSync('ffprobe', ['-v', 'error', '-count_packets', '-select_streams', 'v:0', '-show_entries', 'stream=nb_read_packets', '-of', 'csv=p=0', tmpOut]).toString().match(/\d+/) || [])[0]);
 if (got !== total) { console.error(`[patch] spliced film has ${got} frames, expected ${total}: the old film is left as it was`); process.exit(1); }
 copyFileSync(FILM, STEM + '.prev.mp4'); renameSync(tmpOut, FILM);
 writeFileSync(BASE, JSON.stringify(pinned, null, 1));
