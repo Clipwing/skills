@@ -1,4 +1,4 @@
-// heygen-auto-edit engine, part 3: full-screen scenes. Every card is drawn flat into a layer, then placed in 3D
+// talking-head-auto-edit engine, part 3: full-screen scenes. Every card is drawn flat into a layer, then placed in 3D
 // (WebGL) on a stage with depth: paper texture, a soft light, out-of-focus shapes behind and in front, a shadow.
 // Cards enter with a 3D settle, the camera drifts and dollies in while they hold, and they lean away as they leave.
 'use strict';

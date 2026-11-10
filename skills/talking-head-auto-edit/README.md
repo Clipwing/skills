@@ -1,4 +1,4 @@
-# HeyGen Auto-Edit
+# Talking-Head Auto-Edit
 
 Turns a HeyGen avatar video (or any talking-head take) into a finished creator-style video, in 16:9 and 9:16:
 

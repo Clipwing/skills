@@ -1,4 +1,4 @@
-// heygen-auto-edit engine, part 2: the camera on the presenter.
+// talking-head-auto-edit engine, part 2: the camera on the presenter.
 // Framing is a set of cuts between a wide shot (1.0) and a medium-close shot (<= ~1.2: never a tight face crop).
 // The camera follows the head (work/track.json from matte.py) like an operator: the face stays put in the frame.
 'use strict';

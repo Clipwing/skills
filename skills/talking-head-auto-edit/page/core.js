@@ -1,4 +1,4 @@
-// heygen-auto-edit engine, part 1: constants, maths, data, layers, text, and a small WebGL compositor for 3D planes.
+// talking-head-auto-edit engine, part 1: constants, maths, data, layers, text, and a small WebGL compositor for 3D planes.
 // The page is a pure function of time: noise is seeded by frame, so any frame can be drawn in any order.
 'use strict';
 

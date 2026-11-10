@@ -1,4 +1,4 @@
-// heygen-auto-edit engine, part 5: interface scenes (the kind of screen a viewer recognises from their own apps).
+// talking-head-auto-edit engine, part 5: interface scenes (the kind of screen a viewer recognises from their own apps).
 //   post  : a social post typed in a composer and published, filmed off a monitor; reactions count up
 //   phone : a phone on the desk playing a vertical clip cut from the presenter's own take, with app UI and captions
 'use strict';

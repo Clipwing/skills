@@ -16,7 +16,7 @@ the video description (CC BY / BY-SA require them).
 import argparse, json, os, re, subprocess, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
-UA = {"User-Agent": "heygen-auto-edit/1.0 (video editing skill)"}
+UA = {"User-Agent": "talking-head-auto-edit/1.0 (video editing skill)"}
 
 
 def get_json(url, tries=3, headers=None):

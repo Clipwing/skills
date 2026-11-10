@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Person matte + head track for a prepared take (run after prepare.py).
 
-    python scripts/matte.py --work work [--model ~/.cache/heygen-auto-edit/rvm_mobilenetv3_fp32.onnx]
+    python scripts/matte.py --work work [--model ~/.cache/talking-head-auto-edit/rvm_mobilenetv3_fp32.onnx]
 
 Robust Video Matting (MobileNetV3, ONNX, GPL-3.0 model weights downloaded once from the RVM GitHub release) runs over
 work/frames/ in order (it is recurrent: hair edges stay stable from frame to frame) and writes
@@ -17,7 +17,7 @@ MODEL_URL = "https://github.com/PeterL1n/RobustVideoMatting/releases/download/v1
 
 
 def model_path(arg):
-    p = Path(os.path.expanduser(arg)) if arg else Path.home() / ".cache" / "heygen-auto-edit" / "rvm_mobilenetv3_fp32.onnx"
+    p = Path(os.path.expanduser(arg)) if arg else Path.home() / ".cache" / "talking-head-auto-edit" / "rvm_mobilenetv3_fp32.onnx"
     if not p.exists():
         p.parent.mkdir(parents=True, exist_ok=True)
         print(f"[matte] downloading the RVM model to {p}", flush=True)

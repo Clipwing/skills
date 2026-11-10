@@ -1,4 +1,4 @@
-// heygen-auto-edit engine, part 5: the timeline. Edit rules are enforced here, whatever the plan says:
+// talking-head-auto-edit engine, part 5: the timeline. Edit rules are enforced here, whatever the plan says:
 //   - the presenter is never on screen for a flash between two full-screen beats (a gap < MIN_SHOT is closed: the
 //     first beat runs on and the two hand over card to card);
 //   - every change between the presenter and a full-screen beat is a transition, never a hard cut;

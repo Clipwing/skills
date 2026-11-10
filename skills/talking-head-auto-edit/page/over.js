@@ -1,4 +1,4 @@
-// heygen-auto-edit engine, part 4: what draws over (or around) the presenter.
+// talking-head-auto-edit engine, part 4: what draws over (or around) the presenter.
 //   words  : solid 3D words standing in the room; `behind` ones sit on the wall and the head passes in front of them
 //   callout, subscribe : small labels
 //   split  : the presenter slides into a window on one side, a text panel takes the other side (a full-screen beat

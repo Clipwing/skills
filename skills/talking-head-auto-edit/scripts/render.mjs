@@ -29,9 +29,9 @@ if (!existsSync(PLAN)) { console.error(`no plan ${PLAN}`); process.exit(2); }
 
 async function playwright() {
   let groot = ''; try { groot = execFileSync('npm', ['root', '-g'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch {}
-  for (const base of [process.env.PLAYWRIGHT_DIR, HERE, WORK, join(os.homedir(), '.cache', 'heygen-auto-edit'), groot].filter(Boolean)) for (const name of ['playwright', 'playwright-core']) {
+  for (const base of [process.env.PLAYWRIGHT_DIR, HERE, WORK, join(os.homedir(), '.cache', 'talking-head-auto-edit'), groot].filter(Boolean)) for (const name of ['playwright', 'playwright-core']) {
     try { const p = createRequire(join(base, 'noop.js')).resolve(name); const m = await import(pathToFileURL(p).href); return m.default ?? m; } catch {} }
-  const cache = join(os.homedir(), '.cache', 'heygen-auto-edit'); log('installing playwright-core into', cache); mkdirSync(cache, { recursive: true });
+  const cache = join(os.homedir(), '.cache', 'talking-head-auto-edit'); log('installing playwright-core into', cache); mkdirSync(cache, { recursive: true });
   execFileSync('npm', ['i', '--prefix', cache, 'playwright-core@1.56.1'], { stdio: 'inherit' });
   const m = await import(pathToFileURL(createRequire(join(cache, 'noop.js')).resolve('playwright-core')).href); return m.default ?? m;
 }

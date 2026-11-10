@@ -1,9 +1,9 @@
 ---
-name: heygen-auto-edit
+name: talking-head-auto-edit
 description: Auto-edit a HeyGen avatar video (or any talking-head take) into a finished creator-style YouTube video in 16:9 and/or 9:16 - pauses cut, a camera that follows the face, 3D cards (checklists, charts, tables, roadmaps, mind maps, compare cards), app screens filmed off a monitor (search, social posts, a phone playing a clip), a split screen with the presenter in a window, 3D words standing beside the head behind a person matte, free stock photos and clips (Pixabay / Pexels), transitions, film grain, captions for vertical, music ducked under the voice and real sound effects via the real-sfx skill. Takes an optional brand kit (colours, fonts, logo). After delivery, changes to single scenes are patched into the finished film without a full re-render. Use when the user asks to edit, cut, auto-edit, polish or add b-roll / motion graphics / zooms / captions / music to a HeyGen, Synthesia, avatar, talking-head, webcam or podcast-style video, or to change a scene of a video made with this skill, even if they do not name the skill.
 ---
 
-# heygen-auto-edit: a talking head into a finished video
+# talking-head-auto-edit: a talking head into a finished video
 
 The look is a modern creator explainer (references: the Lera Clipwing YouTube videos, `references/style.md`):
 the presenter is cut every few seconds between a wide and a medium-close frame that follows the face, and every idea
@@ -19,7 +19,7 @@ meme clips (copyright strikes), no generated images; the user's own screenshots 
 ## What you need
 
 - `ffmpeg`, Python 3.9+, Node 18+, Chrome or Chromium (Playwright's, or the system Chrome; `render.mjs` installs
-  `playwright-core` into `~/.cache/heygen-auto-edit` on first use).
+  `playwright-core` into `~/.cache/talking-head-auto-edit` on first use).
 - Word timings: `pip install faster-whisper` (downloads the model once), or a VTT / words JSON you already have.
   Optional `pip install opencv-python-headless` to find the face (otherwise the centre of the upper third is assumed).
 - The person matte: `pip install onnxruntime opencv-python-headless numpy` (`matte.py` downloads the RVM model, ~15 MB,
