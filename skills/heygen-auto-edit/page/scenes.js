@@ -192,7 +192,7 @@ const SCENES = {
       if (it.note && k > 0) { c.save(); c.globalAlpha = eOut(prog(t, at + .25, .4)); c.font = font(iSize * .58, 700); const nw = c.measureText(it.note).width; chip(c, cw - pad - nw - 30 * U, y, it.note, it.bad ? C.red : C.green, { size: iSize * .5 }); c.restore(); }
     });
     // progress bar along the bottom
-    const pk = items.length ? done / items.length : 0; c.fillStyle = '#EEEAE3'; roundRect(c, pad, ch - 52 * U, cw - pad * 2, 12 * U, 6 * U); c.fill();
+    const pk = items.length ? items.reduce((a, it, i) => a + eIO(prog(t, it.at ?? (b.start + .6 + i * .9), .7)), 0) / items.length : 0;   // glides step to step c.fillStyle = '#EEEAE3'; roundRect(c, pad, ch - 52 * U, cw - pad * 2, 12 * U, 6 * U); c.fill();
     c.fillStyle = C.green; roundRect(c, pad, ch - 52 * U, Math.max(12 * U, (cw - pad * 2) * pk), 12 * U, 6 * U); c.fill();
     gl3d(g, G => drawCard(G, L.card, cw, ch, pose(t, b, { ry: -4, rx: 4 })));
     foreground(g, t, b);
@@ -272,24 +272,7 @@ const SCENES = {
       });
       ui.restore();
     }
-    // the screen itself: subpixel rows, glare
-    ui.save(); ui.globalAlpha = .05; for (let y = 0; y < H; y += 3) { ui.fillStyle = '#000'; ui.fillRect(0, y, W, 1); } ui.restore();
-    const gl = ui.createLinearGradient(0, 0, W, H); gl.addColorStop(0, 'rgba(255,255,255,.18)'); gl.addColorStop(.35, 'rgba(255,255,255,0)'); gl.addColorStop(.7, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.08)'); ui.fillStyle = gl; ui.fillRect(0, 0, W, H);
-    // a dark room, the monitor in it
-    g.fillStyle = '#121214'; g.fillRect(0, 0, W, H);
-    const room = g.createRadialGradient(W * .5, H * .45, 0, W * .5, H * .5, W * .8); room.addColorStop(0, 'rgba(90,110,140,.35)'); room.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = room; g.fillRect(0, 0, W, H);
-    g.save(); g.globalCompositeOperation = 'screen'; for (let i = 0; i < 6; i++) { const sz = (90 + 120 * hash(i * 7)) * U; g.globalAlpha = .18; g.drawImage(tintSprite(SPR.bokeh, ['#FFB060', '#6FA8FF', '#FF7090'][i % 3]), W * hash(i * 13 + 2) - sz / 2, H * (.1 + .8 * hash(i * 29)) - sz / 2, sz, sz); } g.restore();
-    const ki = eOut5(prog(t, b.start - .1, 1.1)), held = prog(t, b.start, b.end - b.start);
-    const ry = lerp(-26, b.tilt ?? -13, ki) + noise1(t * .35, 4) * 1.2, rx = lerp(12, 5, ki) + noise1(t * .3, 8) * .8, z = lerp(700, 260, ki) - eIO(held) * 300;
-    const sc = .9, mw = W * sc, mh = H * sc;
-    gl3d(g, G => {
-      const bez = scratch('bezel', 64, 64); { const bg = bez.getContext('2d'); bg.fillStyle = '#1b1c1f'; bg.fillRect(0, 0, 64, 64); }
-      G.plane(bez, { w: mw * 1.04, h: mh * 1.06, x: W / 2, y: H / 2, z: z + 8, ry, rx, static: true });
-      G.plane(L.ui, { w: mw, h: mh, x: W / 2, y: H / 2, z, ry, rx });
-    });
-    // screen glow onto the room, then depth of field: the far side of the screen goes soft
-    dof(g, b.tilt ?? -13 < 0 ? 'right' : 'left', 6 * U + (1 - ki) * 10 * U);
-    vignette(g, .4);
+    monitorShot(g, t, b);
   },
 
   // analytics: a KPI card (the number counts, the chart draws, a note pins the moment) and small tiles at other depths
@@ -557,6 +540,29 @@ const SCENES = {
 SCENES.quote.async = SCENES.photo.async = SCENES.video.async = SCENES.image.async = SCENES.endscreen.async = true;
 
 // a mock of a post or a format for compare columns: abstract shapes, no real brand
+
+// the UI in L.ui, filmed off a monitor in a dark room: bezel, perspective, slow push, the far side out of focus
+function monitorShot(g, t, b) {
+  const ui = L.ui.getContext('2d');
+  ui.save(); ui.globalAlpha = .05; for (let y = 0; y < H; y += 3) { ui.fillStyle = '#000'; ui.fillRect(0, y, W, 1); } ui.restore();
+  const gl = ui.createLinearGradient(0, 0, W, H); gl.addColorStop(0, 'rgba(255,255,255,.18)'); gl.addColorStop(.35, 'rgba(255,255,255,0)'); gl.addColorStop(.7, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.08)'); ui.fillStyle = gl; ui.fillRect(0, 0, W, H);
+  // a dark room, the monitor in it
+  g.fillStyle = '#121214'; g.fillRect(0, 0, W, H);
+  const room = g.createRadialGradient(W * .5, H * .45, 0, W * .5, H * .5, W * .8); room.addColorStop(0, 'rgba(90,110,140,.35)'); room.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = room; g.fillRect(0, 0, W, H);
+  g.save(); g.globalCompositeOperation = 'screen'; for (let i = 0; i < 6; i++) { const sz = (90 + 120 * hash(i * 7)) * U; g.globalAlpha = .18; g.drawImage(tintSprite(SPR.bokeh, ['#FFB060', '#6FA8FF', '#FF7090'][i % 3]), W * hash(i * 13 + 2) - sz / 2, H * (.1 + .8 * hash(i * 29)) - sz / 2, sz, sz); } g.restore();
+  const ki = eOut5(prog(t, b.start - .1, 1.1)), held = prog(t, b.start, b.end - b.start);
+  const ry = lerp(-26, b.tilt ?? -13, ki) + noise1(t * .35, 4) * 1.2, rx = lerp(12, 5, ki) + noise1(t * .3, 8) * .8, z = lerp(700, 260, ki) - eIO(held) * 300;
+  const sc = .9, mw = W * sc, mh = H * sc;
+  gl3d(g, G => {
+    const bez = scratch('bezel', 64, 64); { const bg = bez.getContext('2d'); bg.fillStyle = '#1b1c1f'; bg.fillRect(0, 0, 64, 64); }
+    G.plane(bez, { w: mw * 1.04, h: mh * 1.06, x: W / 2, y: H / 2, z: z + 8, ry, rx, static: true });
+    G.plane(L.ui, { w: mw, h: mh, x: W / 2, y: H / 2, z, ry, rx });
+  });
+  // screen glow onto the room, then depth of field: the far side of the screen goes soft
+  dof(g, b.tilt ?? -13 < 0 ? 'right' : 'left', 6 * U + (1 - ki) * 10 * U);
+  vignette(g, .4);
+}
+
 function mock(g, kind, x, y, w, h, col, t, k) {
   g.save(); g.fillStyle = '#F6F4F0'; roundRect(g, x, y, w, h, 18 * U); g.fill();
   const line = (lx, ly, lw, lh = 14 * U, c = '#D9D4CC') => { g.fillStyle = c; roundRect(g, lx, ly, lw, lh, lh / 2); g.fill(); };

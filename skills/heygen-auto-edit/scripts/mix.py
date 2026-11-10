@@ -46,7 +46,8 @@ def main():
 
     length = dur(a.video)
     inputs = ["-i", a.video, "-i", a.voice]
-    graph = ["[1:a]aresample=48000,aformat=channel_layouts=stereo,asplit=2[voice][key]"]
+    # the voice is padded with silence to the film length: the end screen after the last word keeps its sound
+    graph = [f"[1:a]aresample=48000,aformat=channel_layouts=stereo,apad=whole_dur={length:.3f},asplit=2[voice][key]"]
     mix = ["[voice]"]
     if a.music:
         track = pick_music(a.music, length + a.music_start)

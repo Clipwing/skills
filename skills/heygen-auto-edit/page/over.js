@@ -37,7 +37,7 @@ function blurred(key, src, px) {
 // the rule for words around the presenter: the face stays clear, the words stay readable. A word stands beside the
 // head (its inner end may tuck under the hair, never under the face), turned in perspective: the outer end is nearer
 // the camera, the inner end recedes towards the wall behind the presenter.
-const WORD_TURN = -28;   // degrees per side (negative: the outer end comes towards the camera)    // degrees
+const WORD_TURN = 26;    // degrees per side: the end next to the presenter comes towards the camera, the outer end recedes
 function sortWords(b) {
   if (b._sides) return b._sides;
   let last = 1;
@@ -107,9 +107,12 @@ const OVER = {
         s: k * pl.fit * (.9 + .1 * ki), alpha: clamp(ki * 2.5) * (1 - ko) } });
     });
     const draw = list => gl3d(g, G => list.forEach(({ wc, o, key }) => {
-      const sh = blurred(key, wc.c, 12 * U);
-      G.plane(sh, { ...o, x: o.x + 14 * U * o.s, y: o.y + 20 * U * o.s, z: o.z + 40, tint: [.08, .07, .1, 1], alpha: o.alpha * .38 });
-      G.extrude(wc.c, o, 34, 14, [.42, .42, .48], 2.5 * U * o.s, 5 * U * o.s);
+      // the word stands off the wall: a soft shadow cast on the wall behind it (light from the front, up and to the
+      // presenter's side, so it falls down and outwards), plus a tighter contact shadow
+      const side = o.ax > .5 ? -1 : 1, soft = blurred(key + 's', wc.c, 22 * U), hard = blurred(key, wc.c, 7 * U);
+      G.plane(soft, { ...o, x: o.x + side * 80 * U * o.s, y: o.y + 70 * U * o.s, z: o.z + 120, ry: o.ry * .5, rx: 0, s: o.s * 1.02, tint: [.12, .1, .14, 1], alpha: o.alpha * .5 });
+      G.plane(hard, { ...o, x: o.x + side * 12 * U * o.s, y: o.y + 18 * U * o.s, z: o.z + 70, tint: [.08, .07, .1, 1], alpha: o.alpha * .3 });
+      G.extrude(wc.c, o, 60, 20, [.36, .36, .42], side * 3 * U * o.s, 6 * U * o.s);
       G.plane(wc.c, o);
     }));
     if (behind.length) { draw(behind); if (await presenterCutout(t, xf)) blit(g, L.cut, 0, 0); }

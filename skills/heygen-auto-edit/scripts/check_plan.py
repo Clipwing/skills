@@ -9,7 +9,7 @@ summary: how often something changes on screen. Exit code 1 when there is an ERR
 import argparse, json, sys
 from pathlib import Path
 
-FULL = {"title", "list", "compare", "search", "stat", "mindmap", "quote", "image", "bars", "donut", "table", "roadmap", "photo", "video", "split", "endscreen"}
+FULL = {"title", "list", "compare", "search", "stat", "mindmap", "quote", "image", "bars", "donut", "table", "roadmap", "photo", "video", "split", "post", "phone", "endscreen"}
 OVER = {"words", "callout", "subscribe"}
 TRANS = {"cut", "whip", "zoom", "leak", "flash", "fade", "slide", "push3d"}
 

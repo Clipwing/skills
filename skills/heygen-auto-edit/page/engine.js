@@ -16,6 +16,15 @@ function buildBeats() {
   FULL = new Set(Object.keys(SCENES));
   let beats = (PLAN.beats || []).map((b, i) => ({ ...b, i })).filter(b => b.end > b.start).sort((a, b) => a.start - b.start);
   const full = beats.filter(b => FULL.has(b.type));
+  // the last thing a card says must stay readable: at least READ s after it lands (+ a little per character)
+  const READ = 1.6;
+  full.forEach((b, i) => {
+    const its = [...(b.items || []), ...(b.steps || []), ...(b.bars || []), ...(b.parts || []), ...(b.rows || []), ...(b.nodes || []), ...(b.left?.items || []), ...(b.right?.items || [])].filter(x => x.at != null);
+    if (!its.length) return;
+    const last = its.reduce((a, x) => x.at > a.at ? x : a), len = String(last.text || (last.cells || []).join(' ') || last.label || '').length;
+    const need = last.at + READ + Math.min(1.2, len * .03), next = full[i + 1];
+    if (b.end < need) b.end = next ? Math.min(need, next.start) : need;
+  });
   // close short gaps and overlaps between full-screen beats
   for (let i = 0; i + 1 < full.length; i++) { const a = full[i], n = full[i + 1]; if (n.start - a.end < MIN_SHOT) a.end = n.start; }
   if (full[0] && full[0].start < 1) full[0].start = 0;

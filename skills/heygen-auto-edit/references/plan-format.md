@@ -26,6 +26,8 @@ small script that finds phrases in `words.json`, never guess times).
   card -> card: push3d / slide / whip). Set `in` / `out` only to force one.
 - **Framing is never a tight face crop**: `zoom` is capped at 1.24. Framing cuts within 1.2 s of a card are dropped.
 - **Text never leaves the frame**: titles, items and words shrink to fit; `render.mjs --check` lists any that still do.
+- **The last item of a card stays readable**: a card runs at least 1.6 s (+ a little per character) past its last item.
+- **Progress moves smoothly**: bars, counters and lines glide from step to step.
 - After the last word the presenter holds 0.5 s, then the **end screen** runs (`"endscreen": false` to skip it).
 
 ## `talk`: framing of the presenter
@@ -67,7 +69,9 @@ away as it leaves.
 | `mindmap` | `center`, `nodes: [{text, at, icon?, sub?, color?, angle?}]`, `palette?` | a whiteboard in perspective: hub with a pulse, curved branches drawing out to coloured pills |
 | `split` | `side: left/right` (where the presenter goes), `kicker?`, `title`, `items?: [{text, at}]`, `value?` (+ `prefix`/`suffix`) | the presenter slides from full frame into a window on one side, the other side gets the text. Animates itself in and out: no transition |
 | `photo` | `src` or `srcs` (2–3), `caption?`, `query` / `queries` (for `fetch_stock.py`), `zoomFrom?`, `zoomTo?`, `pan?` | one photo fills the frame with a slow move; two or three float as prints at different depths over a blurred backdrop |
-| `video` | `src` (an image-sequence folder from `fetch_stock.py`), `query`, `offset?`, `frame?`, `caption?` | a stock clip, full frame with a slow push (`frame: true`: in a 3D frame on a dark stage) |
+| `video` | `src` (an image-sequence folder from `fetch_stock.py`), `query`, `offset?`, `frame?`, `caption?` | a stock clip, full frame with a slow push (`frame: true`: in a 3D frame on a dark stage). Clips come only from Pexels / Pixabay (`PEXELS_API_KEY` / `PIXABAY_API_KEY`); without a key plan no `video` beats |
+| `post` | `platform: x/linkedin/threads`, `author`, `handle?`, `text` (≤ 20 words), `metrics?: {likes, comments, reposts}`, `cps?` | a post typed in the app's composer, the pointer clicks Post, reactions count up: filmed off a monitor like `search`. For "share an opinion on X", "post it on LinkedIn" |
+| `phone` | `platform: tiktok/shorts/reels`, `handle?`, `caption?`, `title?`, `kicker?`, `side?: left/right`, `likes?`, `comments?` | a phone on the desk playing a vertical clip cut live from the presenter's own take, with the app's UI and word captions; a title on the free side. For clips, Shorts, "one video, many clips" |
 | `image` | `src` (the user's screenshot), `caption?`, `backdrop: paper/presenter` | a screenshot as a 3D card on the stage |
 | `endscreen` | `text`, `channel`, `dur`, `slots?` | added automatically after the last word: thanks, channel name, two "watch next" slots for YouTube's end-screen elements, Subscribe click |
 
@@ -75,7 +79,7 @@ away as it leaves.
 
 | type | fields | looks like |
 |---|---|---|
-| `words` | `items: [{text, at, pos, depth?, size?, color?, ry?, scale?}]`; `text` may hold `\n` (second line small) | solid 3D words standing in the room, fixed in place as the camera moves. `depth: "behind"` (default when a matte exists) puts the word on the wall and the presenter's head in front of it: place it so it overlaps the head a little (`pos` `top`, `left`, `right`). `depth: "front"` floats it in front, clear of the face. `pos`: `left`, `right`, `top`, `top-left`, `top-right`, `bottom-left`, `bottom-right`. 1–3 words each, max 3 per beat |
+| `words` | `items: [{text, at, pos?, depth?, size?, color?}]`; `text` may hold `\n` (second line small) | solid 3D words standing in the room beside the head, fixed in place as the camera moves, with a shadow cast on the wall. The engine keeps the face clear and the word readable: it stands beside the head (only its inner end may tuck under the hair) and in perspective (the end by the presenter nearer the camera). `pos`: `left` / `right` (default: alternating), `top-` for forehead height, `bottom-` for chin height. A word stays until the next one on its side arrives. 1–3 words each, max 3 per beat; prefer `split`, `phone`, `post` and cards for anything longer |
 | `callout` | `text`, `side: left/right` | a label with a drawn arrow to the presenter |
 | `subscribe` | — | a Subscribe pill clicked by a cursor (the end screen already has one) |
 
