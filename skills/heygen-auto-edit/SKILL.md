@@ -1,6 +1,6 @@
 ---
 name: heygen-auto-edit
-description: Auto-edit a HeyGen avatar video (or any talking-head take) into a finished YouTube-style video in 16:9 and/or 9:16 - pauses cut, punch-in zooms on the presenter, full-screen cards (checklists, search bars, stats, mind maps, quotes, screenshots), bold words around the head, whip / zoom / light-leak transitions, film grain, captions for vertical, background music ducked under the voice and real sound effects via the real-sfx skill. Use when the user asks to edit, cut, "смонтировать", "автомонтаж", polish or add b-roll / motion graphics / zooms / captions / music to a HeyGen, Synthesia, avatar, talking-head, webcam or podcast-style video, even if they do not name the skill.
+description: Auto-edit a HeyGen avatar video (or any talking-head take) into a finished creator-style YouTube video in 16:9 and/or 9:16 - pauses cut, a camera that follows the face, 3D cards (checklists, charts, tables, roadmaps, mind maps, compare cards), app screens filmed off a monitor (search, social posts, a phone playing a clip), a split screen with the presenter in a window, 3D words standing beside the head behind a person matte, free stock photos and clips (Pixabay / Pexels), transitions, film grain, captions for vertical, music ducked under the voice and real sound effects via the real-sfx skill. Takes an optional brand kit (colours, fonts, logo). After delivery, changes to single scenes are patched into the finished film without a full re-render. Use when the user asks to edit, cut, auto-edit, polish or add b-roll / motion graphics / zooms / captions / music to a HeyGen, Synthesia, avatar, talking-head, webcam or podcast-style video, or to change a scene of a video made with this skill, even if they do not name the skill.
 ---
 
 # heygen-auto-edit: a talking head into a finished video
@@ -29,6 +29,17 @@ meme clips (copyright strikes), no generated images; the user's own screenshots 
 - Music: a track or a folder of tracks the user is licensed to use. Never generate music.
 - Sound effects: the **real-sfx** skill with a sound library configured. Without it the film has voice + music only:
   say so.
+
+## Before you start: ask for a free Pixabay key
+
+Stock clips come from Pixabay (free; Pexels works too). Before the first edit, ask the user to create a free account at
+https://pixabay.com/accounts/register/, copy the API key from https://pixabay.com/api/docs/ (shown under "Parameters"
+once signed in) and paste it in the chat. Set it as `PIXABAY_API_KEY` in the environment `fetch_stock.py` runs in
+(an `.env` file or the shell), never in the plan, a script or a committed file. Without a key the edit still works: plan
+photos and cards instead of clips, and say so in the report.
+
+Ask once, together with the other choices: the aspect (16:9, 9:16 or both), a brand kit if the user has one, the music.
+If the user has no preference, the defaults are: 16:9, the look in `references/style.md`, no brand kit.
 
 ## Workflow
 
