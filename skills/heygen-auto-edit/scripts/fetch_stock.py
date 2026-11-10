@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Free stock photos and clips for `photo` / `video` beats, from APIs that need no key.
+"""Free stock photos and clips for `photo` / `video` beats (free APIs; clips need a Pixabay or Pexels key).
 
     python scripts/fetch_stock.py --plan work/edit.json            # candidates for every beat with a "query"
     python scripts/fetch_stock.py --plan work/edit.json --credits  # work/credits.txt for the files the plan uses
