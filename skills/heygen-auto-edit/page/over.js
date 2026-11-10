@@ -6,88 +6,113 @@
 'use strict';
 
 // ------------------------------------------------------------------ 3D words
-// text -> canvas (letters can stagger in); returns {c, w, h}
-function wordCanvas(key, main, sub, size, col, t, at, out) {
-  const g0 = scratch('wm', 8, 8).getContext('2d');
-  g0.font = font(size, 800); const mw = g0.measureText(main).width; g0.font = font(size * .4, 800); const sw = sub ? g0.measureText(sub).width : 0;
-  const pad = size * .25, w = Math.max(mw, sw) + pad * 2, h = size * (sub ? 1.62 : 1.18) + pad * 2;
+// text -> canvas: one or two lines of heavy letters that rise in one after another; returns {c, w, h}
+function wordCanvas(key, lines, sub, size, col, t, at, out) {
+  const g0 = scratch('wm', 8, 8).getContext('2d'), lh = size * 1.02;
+  g0.font = font(size, 900, ROOM); const mw = Math.max(...lines.map(l => g0.measureText(l).width));
+  g0.font = font(size * .36, 800); const sw = sub ? g0.measureText(sub).width : 0;
+  const pad = size * .22, w = Math.max(mw, sw) + pad * 2, h = lh * lines.length + size * .2 + (sub ? size * .5 : 0) + pad * 2;
   const c = scratch('word' + key, w, h), g = clear(c);
-  g.textBaseline = 'alphabetic'; g.textAlign = 'left'; g.font = font(size, 800);
-  let x = pad; const base = pad + size * .92, n = main.length;
-  for (let i = 0; i < n; i++) {
-    const ch = main[i], k = eOut(prog(t, at + i * Math.min(.035, .4 / n), .38)), ko = eIn(prog(t, out - .32 + (n - i) * .012, .3));
-    g.save(); g.globalAlpha = clamp(k * 2) * (1 - ko); g.translate(0, (1 - k) * size * .35 + ko * -size * .2);
-    const lg = g.createLinearGradient(0, base - size, 0, base); lg.addColorStop(0, col); lg.addColorStop(1, shade(col.startsWith('#') ? col : '#ffffff', -.08));
-    g.fillStyle = lg; txt(g, ch, x, base); g.restore();
-    x += g.measureText(ch).width;
-  }
-  if (sub) { const k = eOut(prog(t, at + .25, .4)); g.save(); g.globalAlpha = k * (1 - eIn(prog(t, out - .3, .3))); g.font = font(size * .4, 800); g.fillStyle = col; txt(g, sub, pad + size * .04, base + size * .55); g.restore(); }
+  const n = lines.reduce((a, l) => a + l.length, 0), step = Math.min(.03, .45 / n);
+  let idx = 0;
+  lines.forEach((line, li) => {
+    g.font = font(size, 900, ROOM); g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+    const base = pad + size * .9 + li * lh;
+    // lines line up on the side that faces the presenter (that end is anchored next to the head)
+    let x = pad + (key.endsWith('R') ? 0 : mw - g.measureText(line).width);
+    for (const ch of line) {
+      const k = eOut(prog(t, at + idx * step, .4)), ko = eIn(prog(t, out - .34 + (n - idx) * .01, .3)); idx++;
+      g.save(); g.globalAlpha = clamp(k * 2) * (1 - ko); g.translate(0, (1 - k) * size * .3 - ko * size * .18);
+      const lg = g.createLinearGradient(0, base - size * .8, 0, base); lg.addColorStop(0, col); lg.addColorStop(1, shade(col.startsWith('#') ? col : '#ffffff', -.1));
+      g.fillStyle = lg; txt(g, ch, x, base); g.restore();
+      x += g.measureText(ch).width;
+    }
+  });
+  if (sub) { const k = eOut(prog(t, at + .3, .4)); g.save(); g.globalAlpha = k * (1 - eIn(prog(t, out - .3, .3))); g.font = font(size * .36, 800); g.fillStyle = col; g.textAlign = key.endsWith('R') ? 'left' : 'right'; txt(g, sub, key.endsWith('R') ? pad + size * .04 : w - pad - size * .04, pad + size * .9 + (lines.length - 1) * lh + size * .52); g.restore(); }
   return { c, w, h };
 }
 function blurred(key, src, px) {
   const c = scratch('blur' + key, src.width, src.height), g = clear(c); g.filter = `blur(${px}px)`; g.drawImage(src, 0, 0); g.filter = 'none'; return c;
 }
+// the rule for words around the presenter: the face stays clear, the words stay readable. A word stands beside the
+// head (its inner end may tuck under the hair, never under the face), turned in perspective: the outer end is nearer
+// the camera, the inner end recedes towards the wall behind the presenter.
+const WORD_TURN = -28;   // degrees per side (negative: the outer end comes towards the camera)    // degrees
+function sortWords(b) {
+  if (b._sides) return b._sides;
+  let last = 1;
+  return b._sides = (b.items || []).map(it => { const p = it.pos || ''; const s = /left/.test(p) ? -1 : /right/.test(p) ? 1 : -last; last = s; return s; });
+}
+function placeWord(b, i, it, at, leave) {
+  const side = sortWords(b)[i], depth = it.depth || b.depth || (INFO.matte ? 'behind' : 'front'), pos = it.pos || '';
+  const xa = presenterXf(at), m = 64 * U, gap = 30 * U;
+  // the head moves while the word stands (leans, turns): keep clear of everywhere it goes during the word's life
+  const ts = [0, .2, .4, .6, .8, 1].map(q => lerp(at, Math.max(at, leave - .1), q));
+  const room = ts.map(tt => { const x2 = presenterXf(tt), h = headBox(tt, x2), r = v => v / x2.s;
+    return { l: r(h.cx - h.w * .62 - x2.x), rr: r(h.cx + h.w * .62 - x2.x), top: r(h.top - x2.y), cy: r(h.cy - x2.y), h: r(h.h) }; });
+  const med = a => a.slice().sort((p, q) => p - q)[a.length >> 1], toX = v => xa.x + v * xa.s, toY = v => xa.y + v * xa.s;
+  const hb = { cy: toY(med(room.map(r => r.cy))), h: med(room.map(r => r.h)) * xa.s, top: toY(Math.min(...room.map(r => r.top))) };
+  const faceL = toX(Math.min(...room.map(r => r.l))), faceR = toX(Math.max(...room.map(r => r.rr))), faceT = hb.top - hb.h * .05, faceB = hb.cy + hb.h * .7;
+  const innerX = side < 0 ? faceL - gap : faceR + gap;
+  let y = /top/.test(pos) ? faceT + hb.h * .1 : /bottom/.test(pos) ? faceB + hb.h * .15 : hb.cy - hb.h * .12;
+  const [mainText, sub] = String(it.text).split('\n'), avail = side < 0 ? innerX - m : W - m - innerX;
+  // one line if it fits at a good size, else two balanced lines
+  const g0 = scratch('wm', 8, 8).getContext('2d'), fits = (lines, sz) => { g0.font = font(sz, 900, ROOM); return Math.max(...lines.map(l => g0.measureText(l).width)) * 1.08 <= avail; };
+  // one line or two balanced lines: whichever lets the word stand bigger (one line wins a close call)
+  const size0 = (it.size || 150) * U, sizeFor = ls => { let sz = size0; while (sz > 70 * U && !fits(ls, sz)) sz *= .96; return sz; };
+  const ws = mainText.split(' '), layouts = [[mainText]];
+  if (ws.length > 1) { let best = null; for (let k = 1; k < ws.length; k++) { const a = [ws.slice(0, k).join(' '), ws.slice(k).join(' ')]; g0.font = font(size0, 900, ROOM); const wmax = Math.max(...a.map(l => g0.measureText(l).width)); if (!best || wmax < best.w) best = { a, w: wmax }; } layouts.push(best.a); }
+  const sizes = layouts.map(sizeFor), pick = sizes.length > 1 && sizes[1] > sizes[0] * 1.15 ? 1 : 0;
+  const lines = layouts[pick], size = sizes[pick];
+  const key = b.i + '_' + i + (side < 0 ? 'L' : 'R');
+  const wc = wordCanvas(key, lines, sub, size, '#fff', at + 9, at, at + 99);
+  // fit in room units: check the resting pose at several moments of its life (the framing may change meanwhile)
+  const u = (innerX - xa.x) / xa.s; let v = (y - xa.y) / xa.s, fit = 1;
+  const pose = (tt, f, vv) => { const x2 = presenterXf(tt), k = x2.s / xa.s; return { w: wc.w, h: wc.h, ax: side < 0 ? 1 : 0, ay: .5, x: x2.x + u * x2.s, y: x2.y + vv * x2.s, z: depth === 'behind' ? 0 : -60, ry: side * WORD_TURN, rx: 3, s: k * f }; };
+  const rectOf = o => { const bd = GL.bounds(o); return [Math.min(...bd.map(p => p[0])), Math.min(...bd.map(p => p[1])), Math.max(...bd.map(p => p[0])), Math.max(...bd.map(p => p[1]))]; };
+  for (let pass = 0; pass < 8; pass++) {
+    let bad = false;
+    for (const tt of ts) {
+      const r = rectOf(pose(tt, fit, v));
+      if (r[0] < m || r[2] > W - m) { fit *= .93; bad = true; break; }
+      if (r[1] < m) { v += (m - r[1]) / presenterXf(tt).s + 4 * U; bad = true; break; }
+      if (r[3] > H - m) { v -= (r[3] - H + m) / presenterXf(tt).s + 4 * U; bad = true; break; }
+    }
+    if (!bad) break;
+  }
+  // (no dependence on other words' placement: each render worker places words on its own, so it must be deterministic;
+  //  a word on the same side leaves as the next one arrives, so they never share the spot)
+  return { u, v, s: xa.s, fit, size, lines, sub, side, depth, key, rect: rectOf(pose(at, fit, v)) };
+}
 
 const OVER = {
   async words(g, t, b, xf) {
-    const items = b.items || [], behindAny = [], front = [];
-    const sideOf = pos => /left/.test(pos) ? -1 : /right/.test(pos) ? 1 : 0;
-    // placement is fixed in the room at the word's start: it moves with the camera like a real object
+    const items = b.items || [], behind = [], front = [];
     b._pl ||= [];
     items.forEach((it, i) => {
-      const at = it.at ?? (b.start + i * .6); if (t < at - .05) return;
-      const pos = it.pos || ['left', 'right', 'top-left', 'top-right'][i % 4];
-      const depth = it.depth || b.depth || (INFO.matte ? 'behind' : 'front');
-      const side = sideOf(pos);
-      const [main, sub] = String(it.text).split('\n');
-      if (!b._pl[i]) {
-        const xa = presenterXf(at), hb = headBox(at, xa);
-        let size = (it.size || (depth === 'behind' ? 150 : 120)) * U;
-        // into the head a little when behind (the head covers part of the word), clear of the face when in front
-        const gapX = depth === 'behind' ? -hb.w * .25 : hb.w * .75;
-        let sx = side < 0 ? hb.cx - hb.w * .5 - gapX : side > 0 ? hb.cx + hb.w * .5 + gapX : hb.cx;
-        let sy = /top/.test(pos) || side === 0 ? hb.top - size * (depth === 'behind' ? .05 : .55) : /bottom/.test(pos) ? hb.cy + hb.h * .9 : hb.cy - hb.h * .2;
-        b._pl[i] = { u: (sx - xa.x) / xa.s, v: (sy - xa.y) / xa.s, s: xa.s, size, side, depth };
-      }
-      const pl = b._pl[i], k = xf.s / pl.s, size = pl.size;
-      const col = it.color || '#FFFFFF', wc = wordCanvas(b.i + '_' + i, main, sub, size, col, t, at, Math.min(b.end, items[i + 2]?.at ?? b.end));
-      let x = xf.x + pl.u * xf.s, y = xf.y + pl.v * xf.s;
-      const leave = Math.min(b.end, items[i + 2] ? (items[i + 2].at ?? (b.start + (i + 2) * .6)) : b.end);
-      if (t >= leave) return;
-      const ki = eSpring(prog(t, at, .7)), ko = eIn(prog(t, leave - .35, .35));
-      const ryT = (it.ry ?? pl.side * -16), o = {
-        w: wc.w, h: wc.h, ax: pl.side < 0 ? 1 : pl.side > 0 ? 0 : .5, ay: .62, x, y,
-        z: lerp(-320, 0, ki) + ko * 500 + (pl.depth === 'behind' ? 0 : -60), ry: lerp(ryT - pl.side * 25, ryT, ki) - ko * pl.side * 30, rx: lerp(-25, 4, ki), rz: it.rz ?? pl.side * -1.5,
-        s: k * (it.scale ?? 1), alpha: clamp(ki * 3) * (1 - ko),
-      };
-      // keep the whole word inside the frame (never cut by the edge): measured at its resting pose, then the same
-      // shift / shrink applies to the animated one
-      const m = 48 * U, rest = { ...o, z: pl.depth === 'behind' ? 0 : -60, ry: ryT, rx: 4, alpha: 1 };
-      for (let pass = 0; pass < 3; pass++) {
-        const bd = GL.bounds(rest), xs = bd.map(p => p[0]), ys = bd.map(p => p[1]);
-        const wspan = Math.max(...xs) - Math.min(...xs), hspan = Math.max(...ys) - Math.min(...ys);
-        if (wspan > W - 2 * m || hspan > H - 2 * m) { const f = Math.min((W - 2 * m) / wspan, (H - 2 * m) / hspan) * .97; rest.s *= f; o.s *= f; continue; }
-        const dx = Math.max(0, m - Math.min(...xs)) - Math.max(0, Math.max(...xs) - (W - m)), dy = Math.max(0, m - Math.min(...ys)) - Math.max(0, Math.max(...ys) - (H - m));
-        rest.x += dx; rest.y += dy; o.x += dx; o.y += dy;
-      }
-      // not on top of the word placed before it: move it down (or up) out of the way, once, at placement time
-      const bd = GL.bounds(rest), r = [Math.min(...bd.map(p => p[0])), Math.min(...bd.map(p => p[1])), Math.max(...bd.map(p => p[0])), Math.max(...bd.map(p => p[1]))];
-      if (pl.dy === undefined) {
-        pl.dy = 0;
-        for (let j = Math.max(0, i - 1); j < i; j++) { const q = b._pl[j]?.rect; if (!q) continue;
-          if (r[0] < q[2] && q[0] < r[2] && r[1] + pl.dy < q[3] && q[1] < r[3] + pl.dy) { const down = q[3] - (r[1] + pl.dy) + 24 * U, up = (r[3] + pl.dy) - q[1] + 24 * U; pl.dy += (r[3] + down < H - m) ? down : -up; } }
-        pl.rect = [r[0], r[1] + pl.dy, r[2], r[3] + pl.dy];
-      }
-      o.y += pl.dy;
-      (pl.depth === 'behind' ? behindAny : front).push({ wc, o, key: b.i + '_' + i });
+      const at = it.at ?? (b.start + i * .6);
+      // a word stays until the next word on its side arrives (or the one two places later), at least 1.6 s
+      const sides = sortWords(b), nextSame = items.findIndex((x, j) => j > i && sides[j] === sides[i]);
+      const until = Math.min(...[nextSame, i + 2].filter(j => j > i && j < items.length).map(j => (items[j].at ?? (b.start + j * .6)) - .15), b.end);
+      const leave = Math.min(b.end, Math.max(at + 1.6, until));
+      if (t < at - .05 || t >= leave) return;
+      b._pl[i] ||= placeWord(b, i, it, at, leave);
+      const pl = b._pl[i], wc = wordCanvas(pl.key, pl.lines, pl.sub, pl.size, it.color || '#FFFFFF', t, at, leave);
+      const ki = eOut5(prog(t, at, .8)), ko = eIn(prog(t, leave - .4, .4)), k = xf.s / pl.s;
+      const turn = pl.side * WORD_TURN;
+      (pl.depth === 'behind' ? behind : front).push({ wc, key: pl.key, o: {
+        w: wc.w, h: wc.h, ax: pl.side < 0 ? 1 : 0, ay: .5, x: xf.x + pl.u * xf.s, y: xf.y + pl.v * xf.s,
+        z: (pl.depth === 'behind' ? 0 : -60) + ko * 60,
+        ry: turn * (1 + (1 - ki) * .8 + ko * .6), rx: 3 + (1 - ki) * 8, rz: 0,
+        s: k * pl.fit * (.9 + .1 * ki), alpha: clamp(ki * 2.5) * (1 - ko) } });
     });
     const draw = list => gl3d(g, G => list.forEach(({ wc, o, key }) => {
-      const sh = blurred(key, wc.c, 10 * U);
-      G.plane(sh, { ...o, x: o.x + 10 * U, y: o.y + 16 * U, z: o.z + 30, tint: [0, 0, 0, 1], alpha: o.alpha * .45 });
-      G.extrude(wc.c, o, 30, 12, [.2, .2, .24], 3.5 * U * o.s, 6 * U * o.s);
+      const sh = blurred(key, wc.c, 12 * U);
+      G.plane(sh, { ...o, x: o.x + 14 * U * o.s, y: o.y + 20 * U * o.s, z: o.z + 40, tint: [.08, .07, .1, 1], alpha: o.alpha * .38 });
+      G.extrude(wc.c, o, 34, 14, [.42, .42, .48], 2.5 * U * o.s, 5 * U * o.s);
       G.plane(wc.c, o);
     }));
-    if (behindAny.length) { draw(behindAny); if (await presenterCutout(t, xf)) blit(g, L.cut, 0, 0); }
+    if (behind.length) { draw(behind); if (await presenterCutout(t, xf)) blit(g, L.cut, 0, 0); }
     if (front.length) draw(front);
   },
 

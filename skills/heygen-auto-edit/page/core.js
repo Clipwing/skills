@@ -19,6 +19,7 @@ let C = {
   hub: '#3BA9F5', chart: '#1F9E96', chart2: '#7B61FF', chart3: '#FF7A1A',
 };
 let SANS = 'Inter, Helvetica, Arial, sans-serif', SERIF = 'Serif2, Caslon, Georgia, serif', HEAD = 'Head, Inter, Helvetica, sans-serif';
+let ROOM = 'Room, Head, Inter, Helvetica, sans-serif';   // the 3D words around the presenter
 
 // ------------------------------------------------------------------ maths
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));

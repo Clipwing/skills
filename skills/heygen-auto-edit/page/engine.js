@@ -227,6 +227,7 @@ async function loadBrand() {
   const face = async (fam, file, weights) => { for (const w of weights) { const f = new FontFace(fam, `url(/assets/${base}${file})`, { weight: String(w) }); await f.load(); document.fonts.add(f); } };
   if (br.fonts?.head) { await face('BrandHead', br.fonts.head, [800]); HEAD = 'BrandHead, ' + HEAD; }
   if (br.fonts?.body) { await face('BrandBody', br.fonts.body, [500, 600, 700]); SANS = 'BrandBody, ' + SANS; }
+  if (br.fonts?.words) { await face('BrandWords', br.fonts.words, [900]); ROOM = 'BrandWords, ' + ROOM; }
   if (br.fonts?.serif) { await face('BrandSerif', br.fonts.serif, [700]); SERIF = 'BrandSerif, ' + SERIF; }
   if (br.logo) BRAND.logo = await loadImage(`/assets/${base}${br.logo}`);
 }
@@ -243,7 +244,7 @@ async function loadBrand() {
       for (const s of [b.src, ...(b.srcs || [])]) if (s && ['image', 'photo'].includes(b.type) && !IMG[s]) IMG[s] = await loadImage('/assets/' + s);
       if (b.type === 'video' && b.src && !SEQ[b.src]) SEQ[b.src] = await loadJSON(`/assets/${b.src}/seq.json`, null);
     }
-    for (const [w, fam] of [[800, SANS], [700, SANS], [600, SANS], [500, SANS], [700, SERIF]]) await document.fonts.load(font(40, w, fam));
+    for (const [w, fam] of [[800, SANS], [700, SANS], [600, SANS], [500, SANS], [700, SERIF], [900, ROOM]]) await document.fonts.load(font(40, w, fam));
     makeSprites(); buildTalk(); buildBeats(); buildCaptions();
     window.DURATION = DUR; window.FPS = FPS; window.CUES = buildCues(); window.seek = seek; window.ASPECT = ASPECT;
     window.BEATS_INFO = BEATS.filter(b => b._full || b.type === 'words').map(b => ({ type: b.type, start: b.start, end: b.end, in: b.in, out: b.out }));
