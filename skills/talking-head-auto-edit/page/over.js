@@ -31,8 +31,8 @@ const OVER = {
     const items = b.items || [], side = wordsSide(b);
     const env = eOut(prog(t, b.start - .1, .45)) * (1 - eIn(prog(t, b.end - .3, .3)));
     if (env <= 0) return;
-    // one white plate per line, standing in space on the free side: turned towards the presenter (the edge by the
-    // presenter nearer the camera), stacked as they are said, each with a soft shadow. 9:16: low, square to the camera.
+    // one white plate per line, standing in space on the free side, turned gently (~11 degrees) so the outer edge is nearer the camera (the edge by the
+    // presenter recedes), stacked as they are said, each with a soft shadow. 9:16: low, square to the camera.
     const pw = V ? W * .82 : W * .36, pad = 44 * U, gapY = 26 * U, cx = V ? W / 2 : (side > 0 ? W * .73 : W * .27);
     const tmp = scratch('wordsMeasure', 8, 8).getContext('2d');
     const fits = items.map(it => fitWrap(tmp, wordText(it), pw - pad * 2 - 26 * U, (it.size || (items.length > 1 ? 72 : 92)) * U, 800, SANS, 2, 44 * U));
@@ -54,7 +54,7 @@ const OVER = {
     }).filter(Boolean);
     gl3d(g, G => plates.forEach(p => drawCard(G, p.cv, pw, p.h, {
       x: cx + (1 - p.k) * side * 60 * U, y: p.cy + (1 - p.k) * 30 * U, z: (1 - p.k) * 140 - p.i * 24,
-      ry: V ? 0 : -side * (26 + 8 * (1 - p.k)), rx: V ? 6 : 4, rz: 0, alpha: env * clamp(p.k * 2), shadow: .2,
+      ry: V ? 0 : side * (11 + 6 * (1 - p.k)), rx: V ? 4 : 0, rz: 0, alpha: env * clamp(p.k * 2), shadow: .2,
     })));
   },
   // a short label with a hand-drawn arrow towards the presenter

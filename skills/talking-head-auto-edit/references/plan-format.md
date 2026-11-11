@@ -83,7 +83,7 @@ holds with a slow orbit and push-in and hands over with a soft blur. `vfx.depth`
 
 | type | fields | looks like |
 |---|---|---|
-| `words` | `items: [{text, at, color?}]`, `side?: left/right` (where the text goes; default: the first item's `pos`, else right) | the camera eases the presenter to the other side and a little closer (1.22), white plates stand on the free side, turned towards the presenter with soft shadows; lines land on their words and stack, the active one with an accent bar, older ones muted. 1–5 words a line, max 3 lines; prefer `split`, `phone`, `post` and cards for anything longer |
+| `words` | `items: [{text, at, color?}]`, `side?: left/right` (where the text goes; default: the first item's `pos`, else right) | the camera eases the presenter to the other side and a little closer (1.22), white plates stand on the free side, gently turned (outer edge nearer the camera) with soft shadows; lines land on their words and stack, the active one with an accent bar, older ones muted. 1–5 words a line, max 3 lines; prefer `split`, `phone`, `post` and cards for anything longer |
 | `words` + `style: "headline"` | `text`, `mark?` (word(s) with a marker) | one line on a white band across the lower third, each word landing as it is spoken. For the video's opening line |
 | `callout` | `text`, `side: left/right` | a label with a drawn arrow to the presenter |
 | `subscribe` | — | a Subscribe pill clicked by a cursor (the end screen already has one) |
