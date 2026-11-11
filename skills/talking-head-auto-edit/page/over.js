@@ -54,7 +54,7 @@ const OVER = {
     }).filter(Boolean);
     gl3d(g, G => plates.forEach(p => drawCard(G, p.cv, pw, p.h, {
       x: cx + (1 - p.k) * side * 60 * U, y: p.cy + (1 - p.k) * 30 * U, z: (1 - p.k) * 140 - p.i * 24,
-      ry: V ? 0 : -side * (16 + 8 * (1 - p.k)), rx: V ? 6 : 4, rz: 0, alpha: env * clamp(p.k * 2), shadow: .2,
+      ry: V ? 0 : -side * (26 + 8 * (1 - p.k)), rx: V ? 6 : 4, rz: 0, alpha: env * clamp(p.k * 2), shadow: .2,
     })));
   },
   // a short label with a hand-drawn arrow towards the presenter
