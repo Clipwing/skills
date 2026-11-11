@@ -45,14 +45,14 @@ Two professional editors reviewed a full edit made with this skill. Their notes 
 where they differ; the engine follows them:
 - **Plain white stage** for every card and screen: no gradients, no blurred photo or paused frame behind anything
   (the end screen too), no dark room or black around screens, no vignette.
-- **Flat**: no 3D lettering, no tilted or perspective cards, no monitor bezel (it reads as stock). A clean window
-  frame around the presenter in a split.
+- **Clean depth** (Nerd, same day: flat read as boring): no 3D lettering and no monitor bezel, but cards, screens and
+  word plates stand slightly turned in space with soft shadows. A clean window frame around the presenter in a split.
 - **Words on the presenter**: the presenter moves aside and closer, the text takes the other side in a plain panel.
   The opening line is one line.
 - **Transitions keep the whole frame**: no shrunken or cropped screens, no whip seams, no muddy cross-dissolve, no
   shape that changes under a transition. A soft blur dissolve is the default.
 - **Timing**: inserts land exactly on the words; the kicker 3–4 frames before the title; every key eased, never
-  linear; a timeline stop lights up when the line reaches it; tip titles stay until they are read; no short presenter
+  linear; a timeline stop lights up when the line reaches it; tip titles get a short pause in the voice so they can be read, and never hang into the next sentence; no short presenter
   shots between inserts.
 - **Layout**: even margins, icons centred in their circles, small ticks, a card header on one line, room above a
   chart and a visible smallest bar, one-line labels, the accent bar inside its plate, photos never cropped.

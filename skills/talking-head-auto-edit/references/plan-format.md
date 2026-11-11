@@ -29,8 +29,8 @@ small script that finds phrases in `words.json`, never guess times).
 - **Framing is never a tight face crop**: `zoom` is capped at 1.24. Framing cuts within 1.2 s of a card are dropped.
 - **Text never leaves the frame**: titles, items and words shrink to fit; `render.mjs --check` lists any that still do.
 - **The last item of a card stays readable**: a card runs at least 1.6 s (+ a little per character) past its last item;
-  a `title` until it is typed + 1.6 s, a `quote` until its last word is said + 1.6 s (the next card may start later
-  when its first point comes later anyway).
+  a `quote` until its last word is said + 1.2 s. A `title` is not stretched into the next sentence: `hold.py` puts a
+  short pause in the voice after it instead.
 - **Progress moves smoothly**: bars, counters and lines glide from step to step.
 - After the last word the presenter holds 0.5 s, then the **end screen** runs (`"endscreen": false` to skip it).
 
@@ -53,8 +53,8 @@ Alternate wide and medium-close; a shot lasts 2–6 s; the first 3 s are wide.
 ## `beats`
 
 Every beat has `type`, `start`, `end`. Full-screen beats replace the presenter (the voice continues); overlays draw
-over the presenter. Most fields are optional; every scene rises in flat to the camera, holds with a slow push-in
-and hands over with a soft blur. The stage is plain white (`brand.colors.paper`).
+over the presenter. Most fields are optional; every scene rises in slightly turned in space (a soft shadow under it), settles,
+holds with a slow orbit and push-in and hands over with a soft blur. `vfx.depth` (default 1) scales the turn; 0 is flat. The stage is plain white (`brand.colors.paper`).
 
 ### Full-screen scenes
 
@@ -83,7 +83,7 @@ and hands over with a soft blur. The stage is plain white (`brand.colors.paper`)
 
 | type | fields | looks like |
 |---|---|---|
-| `words` | `items: [{text, at, color?}]`, `side?: left/right` (where the text goes; default: the first item's `pos`, else right) | the camera eases the presenter to the other side and a little closer (1.22), a flat white panel takes the free side; lines land on their words and stack, the active one with an accent bar, older ones muted. 1–5 words a line, max 3 lines; prefer `split`, `phone`, `post` and cards for anything longer |
+| `words` | `items: [{text, at, color?}]`, `side?: left/right` (where the text goes; default: the first item's `pos`, else right) | the camera eases the presenter to the other side and a little closer (1.22), white plates stand on the free side, turned towards the presenter with soft shadows; lines land on their words and stack, the active one with an accent bar, older ones muted. 1–5 words a line, max 3 lines; prefer `split`, `phone`, `post` and cards for anything longer |
 | `words` + `style: "headline"` | `text`, `mark?` (word(s) with a marker) | one line on a white band across the lower third, each word landing as it is spoken. For the video's opening line |
 | `callout` | `text`, `side: left/right` | a label with a drawn arrow to the presenter |
 | `subscribe` | — | a Subscribe pill clicked by a cursor (the end screen already has one) |

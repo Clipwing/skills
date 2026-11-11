@@ -5,7 +5,7 @@ Turns a HeyGen avatar video (or any talking-head take) into a finished creator-s
 - long pauses cut (a breath kept after the last word), word timings from faster-whisper;
 - a person matte (Robust Video Matting) and a head track: the camera follows the face; for words on the presenter it moves them aside and a white text panel takes the other side;
 - the presenter cut between wide and medium-close framings, never a tight face crop;
-- full-screen scenes on a plain white stage, flat to the camera, with soft shadows and a slow push-in: typed serif chapter titles, checklists,
+- full-screen scenes on a plain white stage, in gentle perspective with soft shadows and a slow orbit: typed serif chapter titles, checklists,
   good vs bad / option vs option cards, bar and donut charts, tables, roadmaps, analytics with tiles, a mind-map board,
   a search bar in an app window, quotes landing word by word, a split screen with the presenter in a window;
 - app screens in a clean window (a search typing, a social post being published) and a large phone playing a clip;

@@ -1,18 +1,18 @@
 ---
 name: talking-head-auto-edit
-description: Auto-edit a HeyGen avatar video (or any talking-head take) into a finished creator-style YouTube video in 16:9 and/or 9:16 - pauses cut, a camera that follows the face, flat cards on a clean white stage (checklists, charts, tables, roadmaps, mind maps, compare cards), app screens in a clean window (search, social posts, a large phone playing a clip), a split screen with the presenter in a window, words in a white panel beside the presenter and a one-line headline, free stock photos and clips (Pixabay / Pexels), transitions, film grain, captions for vertical, music ducked under the voice and real sound effects via the real-sfx skill. Takes an optional brand kit (colours, fonts, logo). After delivery, changes to single scenes are patched into the finished film without a full re-render. Use when the user asks to edit, cut, auto-edit, polish or add b-roll / motion graphics / zooms / captions / music to a HeyGen, Synthesia, avatar, talking-head, webcam or podcast-style video, or to change a scene of a video made with this skill, even if they do not name the skill.
+description: Auto-edit a HeyGen avatar video (or any talking-head take) into a finished creator-style YouTube video in 16:9 and/or 9:16 - pauses cut, a camera that follows the face, cards in gentle perspective on a clean white stage (checklists, charts, tables, roadmaps, mind maps, compare cards), app screens in a clean window (search, social posts, a large phone playing a clip), a split screen with the presenter in a window, words in a white panel beside the presenter and a one-line headline, free stock photos and clips (Pixabay / Pexels), transitions, film grain, captions for vertical, music ducked under the voice and real sound effects via the real-sfx skill. Takes an optional brand kit (colours, fonts, logo). After delivery, changes to single scenes are patched into the finished film without a full re-render. Use when the user asks to edit, cut, auto-edit, polish or add b-roll / motion graphics / zooms / captions / music to a HeyGen, Synthesia, avatar, talking-head, webcam or podcast-style video, or to change a scene of a video made with this skill, even if they do not name the skill.
 ---
 
 # talking-head-auto-edit: a talking head into a finished video
 
 The look is a modern creator explainer (references: the Lera Clipwing YouTube videos, `references/style.md`):
 the presenter is cut every few seconds between a wide and a medium-close frame that follows the face, and every idea
-gets a picture: flat cards on a plain white stage (checklists, charts, tables, roadmaps, mind maps), app screens in a
+gets a picture: cards in gentle perspective on a plain white stage (checklists, charts, tables, roadmaps, mind maps), app screens in a
 clean window (a search typing, a post being published), a large phone playing a clip, the presenter sliding aside for
-a text panel, stock photos. For a phrase on the presenter the camera moves them aside and a white panel takes the other
-side; transitions are soft blur dissolves and push-in zooms that keep the whole frame. Music sits quietly under the
+a text panel, stock photos. For a phrase on the presenter the camera moves them aside and white plates turned towards them take the
+other side; transitions are soft blur dissolves and push-in zooms that keep the whole frame. Music sits quietly under the
 voice, small real sounds land on every move. The look follows a review by two professional editors
-(`references/style.md`, "Editors' rules"): no 3D lettering, no tilted cards, no gradients or dark stages.
+(`references/style.md`, "Editors' rules"): no 3D lettering, no gradients or dark stages; depth is kept clean (a slight turn and a soft shadow).
 
 
 **Drawn in code** (canvas + WebGL, seeked frame by frame), plus free stock: photos from Pexels / Openverse /
@@ -83,6 +83,15 @@ Read `work/transcript.txt` (sentences with times) and `references/plan-format.md
 
 Show the user the plan as a short timeline (time, what is on screen) before rendering a long film, unless they asked
 for an unattended run.
+
+### 2b. Give section titles a moment
+```
+python scripts/hold.py --work work --plan work/edit.json --dry    # the pauses it would add
+python scripts/hold.py --work work --plan work/edit.json
+```
+After each `title` the presenter's voice pauses briefly (silence after the spoken title, the frame held behind the
+card), so the card can be read and the voice never runs ahead of the picture; the title ends when the voice resumes.
+It moves every later time in the plan and the work files. `--undo` takes the pauses out (do that before re-planning).
 
 ### 3. Check the plan, then the look on stills
 ```
