@@ -1,16 +1,19 @@
 ---
 name: talking-head-auto-edit
-description: Auto-edit a HeyGen avatar video (or any talking-head take) into a finished creator-style YouTube video in 16:9 and/or 9:16 - pauses cut, a camera that follows the face, 3D cards (checklists, charts, tables, roadmaps, mind maps, compare cards), app screens filmed off a monitor (search, social posts, a phone playing a clip), a split screen with the presenter in a window, 3D words standing beside the head behind a person matte, free stock photos and clips (Pixabay / Pexels), transitions, film grain, captions for vertical, music ducked under the voice and real sound effects via the real-sfx skill. Takes an optional brand kit (colours, fonts, logo). After delivery, changes to single scenes are patched into the finished film without a full re-render. Use when the user asks to edit, cut, auto-edit, polish or add b-roll / motion graphics / zooms / captions / music to a HeyGen, Synthesia, avatar, talking-head, webcam or podcast-style video, or to change a scene of a video made with this skill, even if they do not name the skill.
+description: Auto-edit a HeyGen avatar video (or any talking-head take) into a finished creator-style YouTube video in 16:9 and/or 9:16 - pauses cut, a camera that follows the face, flat cards on a clean white stage (checklists, charts, tables, roadmaps, mind maps, compare cards), app screens in a clean window (search, social posts, a large phone playing a clip), a split screen with the presenter in a window, words in a white panel beside the presenter and a one-line headline, free stock photos and clips (Pixabay / Pexels), transitions, film grain, captions for vertical, music ducked under the voice and real sound effects via the real-sfx skill. Takes an optional brand kit (colours, fonts, logo). After delivery, changes to single scenes are patched into the finished film without a full re-render. Use when the user asks to edit, cut, auto-edit, polish or add b-roll / motion graphics / zooms / captions / music to a HeyGen, Synthesia, avatar, talking-head, webcam or podcast-style video, or to change a scene of a video made with this skill, even if they do not name the skill.
 ---
 
 # talking-head-auto-edit: a talking head into a finished video
 
 The look is a modern creator explainer (references: the Lera Clipwing YouTube videos, `references/style.md`):
 the presenter is cut every few seconds between a wide and a medium-close frame that follows the face, and every idea
-gets a picture: 3D cards on warm paper (checklists, charts, tables, roadmaps, mind maps), app screens filmed off a
-monitor (a search typing, a post being published), a phone playing a clip, the presenter sliding aside for a text
-panel, stock photos. Solid 3D words stand in the room beside the head, transitions are whips, zooms and 3D pushes,
-music sits quietly under the voice, small real sounds land on every move.
+gets a picture: flat cards on a plain white stage (checklists, charts, tables, roadmaps, mind maps), app screens in a
+clean window (a search typing, a post being published), a large phone playing a clip, the presenter sliding aside for
+a text panel, stock photos. For a phrase on the presenter the camera moves them aside and a white panel takes the other
+side; transitions are soft blur dissolves and push-in zooms that keep the whole frame. Music sits quietly under the
+voice, small real sounds land on every move. The look follows a review by two professional editors
+(`references/style.md`, "Editors' rules"): no 3D lettering, no tilted cards, no gradients or dark stages.
+
 
 **Drawn in code** (canvas + WebGL, seeked frame by frame), plus free stock: photos from Pexels / Openverse /
 Wikimedia Commons, clips only from Pexels or Pixabay (free API keys `PEXELS_API_KEY`, `PIXABAY_API_KEY`). No movie or
@@ -55,8 +58,7 @@ It cuts pauses longer than 0.35 s (`--max-pause`, `--no-cut` to keep the take wh
 `transcript.txt`, `voice.wav`, every frame as JPEG (colour-graded), `face.json`, `info.json` (`--base` adds a watchable `base.mp4`). HeyGen takes have clean
 audio and few fillers; a long take may still have long breaths between paragraphs: they go.
 
-Check `face.json` (`found` > 0, or look at one frame). Then the matte and the head track (the camera follows it, the
-3D words go around it):
+Check `face.json` (`found` > 0, or look at one frame). Then the matte and the head track (the camera follows it):
 ```
 python scripts/matte.py --work work          # ~10-15 frames/s on a laptop CPU
 ```
@@ -74,8 +76,8 @@ Read `work/transcript.txt` (sentences with times) and `references/plan-format.md
   prefer the scenes above); a user screenshot -> `image`.
   Write a small script that finds phrases in `words.json` for every `at`; never guess times.
 - **stock**: give `photo` / `video` beats a `query` (or `queries`), run `python scripts/fetch_stock.py --plan
-  work/edit.json`, look at each `work/stock/<beat>/sheet.jpg` as one image and set `src` / `srcs`. Skip anything odd or
-  off-topic: no picture is better than a strange one. `--credits` writes the attribution lines.
+  work/edit.json`, look at each `work/stock/<beat>/sheet.jpg` as one image and set `src` / `srcs`. Skip anything odd, off-topic,
+  generated-looking ("AI slop") or weak: no picture is better than a strange one; a designed card often says it better. `--credits` writes the attribution lines.
 - the pacing rules at the end of `plan-format.md`: something changes every 2–4 s, a full-screen beat every 8–15 s.
 - **an English plan for an English take**: card text in the video's language, short, sentence case.
 
@@ -144,10 +146,11 @@ re-rendered and how long it took.
 
 ## Always
 
-- Never cover the face with a card edge, words or a caption, and never hide a word behind the head: the engine
-  places words beside the head; keep `pos` hints and do not force sizes that push them over it.
-- Never let the presenter flash on screen between two cards (the engine joins cards closer than 1.6 s), and give every
-  presenter <-> card change a transition (the engine does by default).
+- Never cover the face with a card edge, words or a caption: the engine moves the presenter aside for words.
+- Never leave the presenter on screen for a moment between two cards (the engine joins cards closer than 3.4 s,
+  unless words beside the presenter sit in the gap), and give every presenter <-> card change a transition (the
+  engine does by default).
+- Follow the editors' rules in `references/style.md`: plain white, flat, everything on the words, eased motion.
 - Do not repeat the same mark in a column (a tick on every row); one badge in a header is enough.
 - A brand kit (`brand.json`: colours, fonts, logo) styles everything: see `plan-format.md`.
 - Card text is short: a title of ≤ 6 words, items of ≤ 6 words. No paragraphs on screen.

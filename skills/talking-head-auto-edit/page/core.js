@@ -1,4 +1,4 @@
-// talking-head-auto-edit engine, part 1: constants, maths, data, layers, text, and a small WebGL compositor for 3D planes.
+// talking-head-auto-edit engine, part 1: constants, maths, data, layers, text, and a small WebGL compositor for planes.
 // The page is a pure function of time: noise is seeded by frame, so any frame can be drawn in any order.
 'use strict';
 
@@ -13,13 +13,12 @@ const ctx = cv.getContext('2d');
 
 // ------------------------------------------------------------------ style
 let C = {
-  paper: '#F4F2EE', paper2: '#ECE8E1', ink: '#121212', ink2: '#3A3733', mute: '#8B8782', line: '#DCD8D1',
+  paper: '#FFFFFF', paper2: '#F4F4F2', ink: '#121212', ink2: '#3A3733', mute: '#8B8782', line: '#DCD8D1',
   green: '#22A447', red: '#E5484D', accent: '#FF3B30', yellow: '#FFD43B', blue: '#2F6BFF',
   pills: ['#7B61FF', '#FF4FA3', '#FFB020', '#FF7A1A', '#22C55E', '#14B8E6'],
   hub: '#3BA9F5', chart: '#1F9E96', chart2: '#7B61FF', chart3: '#FF7A1A',
 };
 let SANS = 'Inter, Helvetica, Arial, sans-serif', SERIF = 'Serif2, Caslon, Georgia, serif', HEAD = 'Head, Inter, Helvetica, sans-serif';
-let ROOM = 'Room, Head, Inter, Helvetica, sans-serif';   // the 3D words around the presenter
 
 // ------------------------------------------------------------------ maths
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -84,7 +83,7 @@ function scratch(key, w, h) {   // a reusable canvas of a given size
 }
 
 // ------------------------------------------------------------------ text
-// heavy sans text (titles, 3D words) uses the display face; brand.json can replace all three families
+// heavy sans text (titles, words beside the presenter) uses the display face; brand.json can replace all three families
 function font(size, weight = 700, fam = SANS) { if (fam === SANS && weight >= 800) fam = HEAD; return `${weight} ${Math.round(size)}px ${fam}`; }
 function wrap(g, text, maxW) {
   const out = [];
@@ -150,12 +149,29 @@ function drawTick(g, x, y, r, k, col, cross) {
   else { g.moveTo(-r * .7, 0); g.lineTo(-r * .2, r * .5); g.lineTo(r * .75, -r * .6); }
   g.stroke(); g.restore();
 }
+// a glyph (emoji, symbol, letter) centred on its drawn shape, not on its font box: symbols like a play triangle or a
+// pencil sit off-centre in their em box, which reads as sloppy inside a circle
+function glyph(g, s, x, y) {
+  g.save(); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  const m = g.measureText(s), w = m.actualBoundingBoxLeft + m.actualBoundingBoxRight, h = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  g.fillText(s, x - w / 2 + m.actualBoundingBoxLeft, y - h / 2 + m.actualBoundingBoxAscent); g.restore();
+}
+// the baseline that puts a line of text optically on y: centred on its capital height, so text next to an icon or a
+// pill lines up with it whatever the font's ascent and descent are
+function midBase(g, y) { const m = g.measureText('H'); return y + m.actualBoundingBoxAscent / 2; }
 // an emoji or a short glyph in a soft round badge
-function badge(g, x, y, r, glyph, col = '#fff', ring = null) {
+function badge(g, x, y, r, sym, col = '#fff', ring = null) {
   g.save(); shadow(g, r * .6, r * .18, .14); g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); noShadow(g);
   if (ring) { g.strokeStyle = ring; g.lineWidth = r * .08; g.stroke(); }
-  if (glyph) { g.font = font(r * 1.05, 700); g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = C.ink; g.fillText(glyph, x, y + r * .06); }
+  if (sym) { g.font = font(r * 1.0, 700); g.fillStyle = C.ink; glyph(g, sym, x, y); }
   g.restore();
+}
+// the words of a sentence matched to the moments they are spoken (words.json), so text lands on the voice. Returns one
+// time per word (null where a word was not found between from and to).
+function spokenTimes(text, from, to) {
+  const norm = w => String(w).toLowerCase().replace(/[^a-z0-9']/g, '');
+  const ws = String(text).split(/\s+/).filter(Boolean).map(norm), pool = WORDS.filter(w => w.s >= from - .05 && w.s <= to);
+  let j = 0; return ws.map(w => { for (let k = j; k < pool.length; k++) if (norm(pool[k].w) === w) { j = k + 1; return pool[k].s; } return null; });
 }
 
 // ------------------------------------------------------------------ WebGL compositor: textured planes in 3D
@@ -238,11 +254,6 @@ void main(){ vec4 c = texture(T, uv);
     project,
     // the four screen corners of a plane, without drawing it (layout)
     bounds(o) { const Mw = model(o); return [[0, 0], [1, 0], [0, 1], [1, 1]].map(([u, v]) => project(Mw, u, v)); },
-    // solid extrusion: the same plane repeated behind itself, darker with depth (3D letters, thick cards)
-    // (an oblique offset down-right makes the sides read even when the plane faces the camera)
-    extrude(src, o, depth, n = 10, col = [0, 0, 0], ox = 0, oy = 0) {
-      for (let i = n; i >= 1; i--) { const k = i / n; this.plane(src, { ...o, x: o.x + ox * k, y: o.y + oy * k, z: (o.z || 0) + depth * k, tint: [col[0], col[1], col[2], .5 + .4 * k], static: true }); }
-    },
     flush(g, alpha = 1) {
       g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = alpha; g.drawImage(c, 0, 0); g.restore();
       if (CHECK) for (const b of boxes) (g.canvas.__boxes ||= []).push({ ...b, a: b.a * alpha });

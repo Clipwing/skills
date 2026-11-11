@@ -1,6 +1,6 @@
-// talking-head-auto-edit engine, part 3: full-screen scenes. Every card is drawn flat into a layer, then placed in 3D
-// (WebGL) on a stage with depth: paper texture, a soft light, out-of-focus shapes behind and in front, a shadow.
-// Cards enter with a 3D settle, the camera drifts and dollies in while they hold, and they lean away as they leave.
+// talking-head-auto-edit engine, part 3: full-screen scenes. Every card is drawn flat into a layer, then placed on a
+// clean white stage with a soft shadow. Cards stand square to the camera (no tilt): they settle in, the camera pushes
+// in slowly while they hold, and the transitions carry them out.
 'use strict';
 
 // ------------------------------------------------------------------ stage
@@ -14,51 +14,20 @@ const PALETTES = {
   warm: ['#FFB38A', '#FFD98A', '#F7A8C4', '#B8D8FF'], cool: ['#9CC8FF', '#B9A8FF', '#8FE3D2', '#FFD3A8'],
   dark: ['#FF8A3D', '#FF4F7B', '#6E7BFF', '#FFC44D'],
 };
-// paper stage: base colour, fibre texture, top light, a dot grid, blurred colour discs drifting at two depths
+// the stage: plain white (or the brand's paper colour). No gradients, no blurred shapes, no vignette: the editors'
+// rule is a clean background that never competes with the card.
 function stage(g, t, b, opt = {}) {
-  const bg = opt.bg || b.bg || C.paper;
-  g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  g.save(); g.globalAlpha = opt.texture ?? .22; g.globalCompositeOperation = 'multiply'; g.fillStyle = g.createPattern(SPR.paper, 'repeat'); g.fillRect(0, 0, W, H); g.restore();
-  const cam = (t - b.start);
-  if (opt.grid !== false) {   // dot grid with a little parallax
-    g.save(); g.fillStyle = opt.dark ? 'rgba(255,255,255,.07)' : 'rgba(40,30,20,.075)'; const sp = 46 * U, ox = (cam * 6 * U) % sp, oy = (cam * 3 * U) % sp;
-    for (let x = -sp + ox; x < W + sp; x += sp) for (let y = -sp + oy; y < H + sp; y += sp) { g.beginPath(); g.arc(x, y, 2.1 * U, 0, Math.PI * 2); g.fill(); }
-    g.restore();
-  }
-  const pal = PALETTES[opt.palette || b.palette || (opt.dark ? 'dark' : 'warm')];
-  g.save(); g.globalCompositeOperation = opt.dark ? 'screen' : 'multiply';
-  for (let i = 0; i < 4; i++) {
-    const sz = (520 + 300 * hash(b.i * 31 + i)) * U, x = W * (i % 2 ? .82 : .14) + noise1(cam * .18 + i * 3, b.i + i) * 120 * U, y = H * (i < 2 ? .16 : .86) + noise1(cam * .15 + i * 5, b.i * 3 + i) * 80 * U;
-    g.globalAlpha = opt.dark ? .22 : .32; g.drawImage(tintSprite(SPR.bokeh, pal[i % pal.length]), x - sz / 2, y - sz / 2, sz, sz);
-  }
-  g.restore();
-  const r = g.createRadialGradient(W * .4, -H * .25, 0, W * .4, -H * .25, Math.max(W, H) * 1.1);
-  r.addColorStop(0, opt.dark ? 'rgba(255,240,220,.10)' : 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, W, H);
-  vignette(g, opt.dark ? .45 : .12);
+  g.fillStyle = opt.bg || b.bg || C.paper; g.fillRect(0, 0, W, H);
 }
-// out-of-focus shapes crossing in front of the card: depth
-function foreground(g, t, b, opt = {}) {
-  const pal = PALETTES[opt.palette || b.palette || 'warm'], cam = t - b.start;
-  g.save(); g.globalCompositeOperation = 'source-over';
-  for (let i = 0; i < 2; i++) {
-    const sz = (300 + 160 * hash(b.i * 17 + i)) * U, side = (b.i + i) % 2;
-    const x = side ? W + sz * .05 - cam * 40 * U : -sz * .05 + cam * 40 * U, y = H * (i ? .9 : .08) + noise1(cam * .3, i + b.i) * 30 * U;
-    g.globalAlpha = .18; g.drawImage(tintSprite(SPR.bokeh, pal[(i + 1) % pal.length]), x - sz / 2, y - sz / 2, sz, sz);
-  }
-  g.restore();
-}
-// how a card stands in 3D at time t: settles in, drifts, dollies in, leans away at the end
+function foreground() {}
+// how a card stands at time t: square to the camera; it rises a little and settles, then the camera pushes in slowly
 function pose(t, b, o = {}) {
-  const ki = eOut5(prog(t, b.start - .12, o.inDur ?? .95)), ko = eIn(prog(t, b.end - .5, .5)), held = prog(t, b.start, b.end - b.start);
-  const seed = b.i * 13 + (o.seed || 0);
+  const ki = eOut5(prog(t, b.start - .12, o.inDur ?? .7)), held = prog(t, b.start, b.end - b.start);
   return {
-    ...o,
-    ry: lerp(o.ryFrom ?? -18, o.ry ?? -3, ki) + ko * (o.ryOut ?? 8) + noise1(t * .25, seed) * 1.4,
-    rx: lerp(o.rxFrom ?? 10, o.rx ?? 3, ki) + noise1(t * .22, seed + 5) * 1,
-    rz: (o.rz ?? 0) + noise1(t * .2, seed + 9) * .3,
-    z: lerp(o.zFrom ?? 380, o.z ?? 0, ki) - eIO(held) * (o.dolly ?? 110) + ko * 90,
-    x: (o.x ?? W / 2) + noise1(t * .3, seed + 2) * 6 * U, y: (o.y ?? H / 2) + noise1(t * .28, seed + 3) * 5 * U,
-    alpha: (o.alpha ?? 1) * clamp(ki * 4),
+    ...o, rx: 0, ry: 0, rz: 0,
+    z: lerp(o.zFrom ?? 110, o.z ?? 0, ki) - eIO(held) * (o.dolly ?? 70),
+    x: o.x ?? W / 2, y: (o.y ?? H / 2) + (1 - ki) * 26 * U,
+    alpha: (o.alpha ?? 1) * clamp(ki * 3),
   };
 }
 let SHADOW = null;
@@ -67,217 +36,196 @@ function shadowSprite() {
   SHADOW = layer(640, 440); const g = SHADOW.getContext('2d'); g.filter = 'blur(34px)'; g.fillStyle = '#000'; roundRect(g, 90, 90, 460, 260, 40); g.fill();
   return SHADOW;
 }
-// a card layer (w x h at the top-left of `src`) in 3D with its shadow
+// a card layer (w x h at the top-left of `src`) with a soft shadow under it
 function drawCard(G, src, w, h, p) {
   const sp = shadowSprite();
-  G.plane(sp, { ...p, w: w * 1.39, h: h * 1.69, y: p.y + 34 * U, z: p.z + 30, alpha: (p.alpha ?? 1) * (p.shadow ?? .3), static: true, tint: undefined });
+  G.plane(sp, { ...p, w: w * 1.39, h: h * 1.69, y: p.y + 22 * U, z: p.z + 10, alpha: (p.alpha ?? 1) * (p.shadow ?? .16), static: true, tint: undefined });
   return G.plane(src, { ...p, w, h, src: [0, 0, w / src.width, h / src.height] });
 }
 function cardBase(g, w, h, opt = {}) {
-  g.save(); g.fillStyle = opt.fill || '#FFFFFF'; roundRect(g, 0, 0, w, h, opt.r ?? 28 * U); g.fill(); g.clip();
-  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(240,236,230,.55)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-  g.globalAlpha = .1; g.globalCompositeOperation = 'multiply'; g.fillStyle = g.createPattern(SPR.paper, 'repeat'); g.fillRect(0, 0, w, h);
-  g.restore();
-  g.save(); g.strokeStyle = 'rgba(0,0,0,.06)'; g.lineWidth = 2 * U; roundRect(g, 1, 1, w - 2, h - 2, opt.r ?? 28 * U); g.stroke(); g.restore();
+  g.save(); g.fillStyle = opt.fill || '#FFFFFF'; roundRect(g, 0, 0, w, h, opt.r ?? 28 * U); g.fill(); g.restore();
+  g.save(); g.strokeStyle = 'rgba(0,0,0,.08)'; g.lineWidth = 2 * U; roundRect(g, 1, 1, w - 2, h - 2, opt.r ?? 28 * U); g.stroke(); g.restore();
 }
 function chip(g, x, y, text, col, opt = {}) {   // small label pill; returns its width
-  const fs = opt.size || 24 * U; g.save(); g.font = font(fs, 800); const w = g.measureText(text).width + fs * 1.4, h = fs * 1.7;
+  const fs = opt.size || 30 * U; g.save(); g.font = font(fs, 800); const w = g.measureText(text).width + fs * 1.4, h = fs * 1.7;
   g.fillStyle = opt.fill || hexA(col, .14); roundRect(g, x, y - h / 2, w, h, h / 2); g.fill();
-  g.fillStyle = col; g.textAlign = 'left'; g.textBaseline = 'middle'; txt(g, text, x + fs * .7, y + fs * .05); g.restore(); return w;
+  g.fillStyle = col; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; txt(g, text, x + fs * .7, midBase(g, y)); g.restore(); return w;
 }
 function typeText(t, start, text, cps = 26) { const n = Math.floor(clamp((t - start) * cps, 0, text.length)); return { s: text.slice(0, n), done: n >= text.length, caret: n < text.length }; }
 
 // ------------------------------------------------------------------ scenes
 const SCENES = {
-  // big serif words typed on paper; a marker sweeps under the key word; the sub line fades in
+  // a big serif headline typed on white; the kicker lands a few frames before the words; a marker sweeps under the key word
   title(g, t, b) {
     stage(g, t, b);
-    const c = clear(L.card), text = b.text || '', maxW = W * (V ? .84 : .78);
-    const f = fitWrap(c, text, maxW, (b.size || (text.length < 16 ? 220 : text.length < 34 ? 168 : 124)) * U, 700, SERIF, V ? 4 : 3);
-    const lh = f.size * 1.14, kick = b.kicker ? 90 * U : 0, subH = b.sub ? f.size * .5 + 40 * U : 0;
-    let y0 = H / 2 - (f.lines.length * lh + subH + kick) / 2 + kick + lh / 2;
+    const c = clear(L.card), text = b.text || '', maxW = W * (V ? .84 : .76), cps = b.cps || 30;
+    const f = fitWrap(c, text, maxW, (b.size || (text.length < 16 ? 190 : text.length < 34 ? 150 : 118)) * U, 700, SERIF, V ? 4 : 3);
+    const lh = f.size * 1.16, kick = b.kicker ? 120 * U : 0, subH = b.sub ? f.size * .5 + 40 * U : 0;
+    const y0 = H / 2 - (f.lines.length * lh + subH + kick) / 2 + kick + lh / 2, t0 = b.start + .14;   // ~3-4 frames after the kicker
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    if (b.kicker) { c.font = font(36 * U, 800); const kw = c.measureText(b.kicker.toUpperCase()).width + 50 * U; withReveal(c, prog(t, b.start - .1, .4), () => chip(c, W / 2 - kw / 2, y0 - lh / 2 - 40 * U, b.kicker.toUpperCase(), b.color || C.accent, { size: 36 * U })); }
-    const typed = typeText(t, b.start - .1, text, b.cps || 24);
+    if (b.kicker) { c.font = font(44 * U, 800); const kw = c.measureText(b.kicker.toUpperCase()).width + 44 * U * 1.4; withReveal(c, prog(t, b.start - .02, .35), () => chip(c, W / 2 - kw / 2, y0 - lh / 2 - 60 * U, b.kicker.toUpperCase(), b.color || C.accent, { size: 44 * U }), 8 * U); }
+    const typed = typeText(t, t0, text, cps);
     let left = typed.s.length; c.font = font(f.size, 700, SERIF);
     f.lines.forEach((ln, i) => {
       const part = ln.slice(0, Math.max(0, left)), lw = c.measureText(ln).width, x0 = W / 2 - lw / 2, y = y0 + i * lh;
       if (b.mark && ln.includes(b.mark)) {      // marker sweep under the key word once it is typed
         const at = ln.indexOf(b.mark), mx = x0 + c.measureText(ln.slice(0, at)).width, mw = c.measureText(b.mark).width;
-        const mk = eOut(prog(t, b.start - .1 + (text.indexOf(b.mark) + b.mark.length) / (b.cps || 24), .35));
-        if (mk > 0) { c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = C.yellow; c.beginPath(); c.roundRect(mx - 10 * U, y + f.size * .02, (mw + 20 * U) * mk, f.size * .42, 8 * U); c.fill(); c.restore(); }
+        const mk = eIO(prog(t, t0 + (text.indexOf(b.mark) + b.mark.length) / cps, .4));
+        if (mk > 0) { c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = C.yellow; c.beginPath(); c.roundRect(mx - 10 * U, y + f.size * .04, (mw + 20 * U) * mk, f.size * .4, 8 * U); c.fill(); c.restore(); }
       }
       c.fillStyle = b.color2 || C.ink; c.textAlign = 'left'; txt(c, part, x0, y);
-      if (typed.caret && left >= 0 && left <= ln.length && Math.floor(t * 2.4) % 2 === 0) { c.fillStyle = C.accent; c.fillRect(x0 + c.measureText(part).width + 4 * U, y - f.size * .42, 5 * U, f.size * .84); }
+      if (typed.caret && left >= 0 && left <= ln.length) { c.fillStyle = C.accent; c.fillRect(x0 + c.measureText(part).width + 6 * U, y - f.size * .42, 5 * U, f.size * .84); }
       left -= ln.length + 1;
     });
     if (b.sub) {
-      const k = prog(t, b.start + text.length / (b.cps || 24), .5);
-      withReveal(c, k, () => { const s = fitFont(c, b.sub, maxW, Math.max(f.size * .34, 40 * U), 500); c.font = font(s, 500); c.fillStyle = C.mute; c.textAlign = 'center'; txt(c, b.sub, W / 2, y0 + f.lines.length * lh + 6 * U); });
+      const k = prog(t, t0 + text.length / cps, .5);
+      withReveal(c, k, () => { const s = fitFont(c, b.sub, maxW, Math.max(f.size * .32, 40 * U), 500); c.font = font(s, 500); c.fillStyle = C.mute; c.textAlign = 'center'; txt(c, b.sub, W / 2, y0 + f.lines.length * lh + 6 * U); });
     }
-    gl3d(g, G => G.plane(L.card, pose(t, b, { w: W, h: H, ryFrom: -8, ry: -1.5, rxFrom: 4, rx: 1, zFrom: 220, dolly: 80 })));
-    foreground(g, t, b);
+    gl3d(g, G => G.plane(L.card, pose(t, b, { w: W, h: H, zFrom: 60, dolly: 60 })));
   },
 
-  // the presenter blurred behind a frosted-glass panel; the sentence comes in word by word and leaves the same way
-  async quote(g, t, b) {
-    const xf = presenterXf(t, { zoomMul: 1.1 + .04 * prog(t, b.start, b.end - b.start) });
-    await drawPresenter(g, t, { xf, blur: 26 * U, dim: .42, noVignette: true });
-    vignette(g, .35);
-    const c = clear(L.card), text = b.text || '', maxW = W * (V ? .78 : .62);
-    const f = fitWrap(c, text, maxW, (b.size || (V ? 92 : 88)) * U, 800, SANS, V ? 4 : 3);
-    const lh = f.size * 1.16, padX = 70 * U, padY = 64 * U, kick = b.kicker ? 64 * U : 0;
-    c.font = font(f.size, 800); const tw = Math.max(...f.lines.map(l => c.measureText(l).width));
-    const pw = tw + padX * 2, ph = f.lines.length * lh + padY * 2 + kick;
-    // glass: a brighter, more blurred cut of what is behind, a hairline edge and a sheen
-    const gx = (W - pw) / 2, gy = (H - ph) / 2;
-    c.save(); roundRect(c, gx, gy, pw, ph, 34 * U); c.clip();
-    c.filter = `blur(${18 * U}px) brightness(1.25) saturate(1.2)`; c.drawImage(g.canvas, 0, 0); c.filter = 'none';
-    c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(gx, gy, pw, ph);
-    const sh = c.createLinearGradient(gx, gy, gx + pw, gy + ph), sk = prog(t, b.start + .2, 1.4);
-    sh.addColorStop(clamp(sk - .2), 'rgba(255,255,255,0)'); sh.addColorStop(clamp(sk), 'rgba(255,255,255,.16)'); sh.addColorStop(clamp(sk + .2), 'rgba(255,255,255,0)'); c.fillStyle = sh; c.fillRect(gx, gy, pw, ph);
-    c.restore();
-    c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 2 * U; roundRect(c, gx + 1, gy + 1, pw - 2, ph - 2, 34 * U); c.stroke();
-    if (b.kicker) chip(c, gx + padX, gy + padY + 10 * U, b.kicker.toUpperCase(), '#FFFFFF', { fill: hexA(b.color || C.accent, .9) });
-    // words: rise and sharpen one after another; on the way out they drop away in reverse
-    const words = text.split(/\s+/), per = Math.min(.09, .9 / words.length); let wi = 0;
-    c.textAlign = 'left'; c.textBaseline = 'middle';
+  // one sentence, big and heavy on white; every word lands on the moment it is spoken; the key word gets a marker
+  quote(g, t, b) {
+    stage(g, t, b);
+    const c = clear(L.card), text = b.text || '', maxW = W * (V ? .84 : .72);
+    const f = fitWrap(c, text, maxW, (b.size || (V ? 96 : 104)) * U, 800, SANS, V ? 4 : 3);
+    const lh = f.size * 1.2, kick = b.kicker ? 90 * U : 0, y0 = H / 2 - (f.lines.length * lh + kick) / 2 + kick + lh / 2;
+    if (b.kicker) { c.font = font(32 * U, 800); const kw = c.measureText(b.kicker.toUpperCase()).width + 32 * U * 1.4; withReveal(c, prog(t, b.start - .02, .35), () => chip(c, W / 2 - kw / 2, y0 - lh / 2 - 44 * U, b.kicker.toUpperCase(), b.color || C.accent, { size: 32 * U }), 8 * U); }
+    const words = text.split(/\s+/), spoken = spokenTimes(text, b.start - .6, b.end), per = Math.min(.12, 1.2 / words.length);
+    let wi = 0, last = b.start;
+    const marks = String(b.mark || '').toLowerCase().split(/\s+/).filter(Boolean);
     f.lines.forEach((ln, li) => {
-      c.font = font(f.size, 800); let x = W / 2 - c.measureText(ln).width / 2; const y = gy + padY + kick + lh * (li + .5);
+      c.font = font(f.size, 800); let x = W / 2 - c.measureText(ln).width / 2; const y = y0 + lh * li;
       for (const w of ln.split(' ')) {
-        const ki = eOut(prog(t, b.start + .12 + wi * per, .45)), ko = eIn(prog(t, b.end - .45 + (words.length - wi) * .015, .35));
-        const ww = c.measureText(w).width, isMark = b.mark && b.mark.split(' ').includes(w.replace(/[^\w'-]/g, ''));
-        if (isMark && ki > .5) { c.save(); c.fillStyle = hexA(C.yellow, .95); roundRect(c, x - 8 * U, y - f.size * .58, (ww + 16 * U) * eOut(prog(t, b.start + .12 + wi * per + .25, .3)), f.size * 1.16, 10 * U); c.fill(); c.restore(); }
-        c.save(); c.globalAlpha = clamp(ki * 1.6) * (1 - ko); const bl = (1 - ki) * 10 * U + ko * 8 * U; if (bl > .3) c.filter = `blur(${bl.toFixed(1)}px)`;
-        c.translate(0, (1 - ki) * 34 * U + ko * 24 * U); c.fillStyle = isMark ? C.ink : '#FFFFFF';
-        if (!isMark) { c.shadowColor = 'rgba(0,0,0,.25)'; c.shadowBlur = 16 * U; }
-        txt(c, w, x, y); c.restore();
+        const at = Math.max(b.start + .1, (spoken[wi] ?? (last + per)) - .08); last = at;
+        const ki = eOut(prog(t, at, .32)), ww = c.measureText(w).width, isMark = marks.includes(w.toLowerCase().replace(/[^a-z0-9'-]/g, ''));
+        if (isMark && ki > 0) { const mk = eIO(prog(t, at + .18, .35)); c.save(); c.fillStyle = C.yellow; roundRect(c, x - 10 * U, y - f.size * .6, (ww + 20 * U) * mk, f.size * 1.2, 12 * U); c.fill(); c.restore(); }
+        c.save(); c.globalAlpha = clamp(ki * 1.6); const bl = (1 - ki) * 10 * U; if (bl > .3) c.filter = `blur(${bl.toFixed(1)}px)`;
+        c.translate(0, (1 - ki) * 26 * U); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'middle'; txt(c, w, x, y); c.restore();
         x += ww + c.measureText(' ').width; wi++;
       }
     });
-    const ko = eIn(prog(t, b.end - .35, .35));
-    gl3d(g, G => G.plane(L.card, pose(t, b, { w: W, h: H, ryFrom: 10, ry: 0, rxFrom: -6, rx: 0, zFrom: 160, dolly: 50, alpha: 1 - ko * .9 })));
+    gl3d(g, G => G.plane(L.card, pose(t, b, { w: W, h: H, zFrom: 60, dolly: 50 })));
   },
 
-  // checklist card: numbered rows; the spoken row lights up, its number turns into a tick; future rows wait blurred
+  // checklist card: numbered rows; the spoken row lights up, its number turns into a tick; future rows wait, well blurred
   list(g, t, b) {
     stage(g, t, b);
     const items = b.items || [], cw = V ? W * .9 : Math.min(W * .74, 1420 * U), iSize = (V ? 56 : 54) * U, rowH = iSize * 2.05;
     const head = 170 * U, ch = head + items.length * rowH + 90 * U, c = clear(L.card); cardBase(c, cw, ch);
-    const pad = 64 * U, tk = prog(t, b.start - .05, .5);
-    // header: badge, title, counter
-    const done = items.filter((it, i) => t >= (it.at ?? (b.start + .6 + i * .9))).length;
-    if (b.icon) badge(c, pad + 38 * U, head / 2 + 8 * U, 38 * U, b.icon, '#FFF3D6');
+    const pad = 64 * U, tk = prog(t, b.start - .05, .5), hy = head / 2 + 8 * U, at = (it, i) => it.at ?? (b.start + .6 + i * .9);
+    // header: badge, title, counter, all on one line (centred on the capital height, not the font box)
+    const done = items.filter((it, i) => t >= at(it, i)).length;
+    if (b.icon) badge(c, pad + 38 * U, hy, 38 * U, b.icon, '#FFF3D6');
     const tx = pad + (b.icon ? 100 * U : 0), cnt = `${done}/${items.length}`;
-    c.font = font(30 * U, 800); const cntW = c.measureText(cnt).width + 44 * U;
+    c.font = font(30 * U, 800); const cntW = c.measureText(cnt).width + 30 * U * 1.4;
     withReveal(c, tk, () => {
-      const f = fitWrap(c, b.title || '', cw - tx - pad - cntW - 30 * U, 72 * U, 800, SANS, 1); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'middle';
-      txt(c, f.lines[0], tx, head / 2 + 8 * U);
-      if (b.highlight) { const w = c.measureText(f.lines[0]).width; c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = C.yellow; c.fillRect(tx - 8 * U, head / 2 + 8 * U + f.size * .05, (w + 16 * U) * eOut(prog(t, b.start + .3, .4)), f.size * .45); c.restore(); }
+      const f = fitWrap(c, b.title || '', cw - tx - pad - cntW - 30 * U, 72 * U, 800, SANS, 1); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+      const by = midBase(c, hy);
+      if (b.highlight) { const w = c.measureText(f.lines[0]).width; c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = C.yellow; c.fillRect(tx - 8 * U, by - f.size * .3, (w + 16 * U) * eIO(prog(t, b.start + .3, .4)), f.size * .4); c.restore(); }
+      txt(c, f.lines[0], tx, by);
     }, 10 * U);
-    chip(c, cw - pad - cntW, head / 2 + 8 * U, cnt, C.green, { size: 30 * U });
+    chip(c, cw - pad - cntW, hy, cnt, C.green, { size: 30 * U });
     c.fillStyle = C.line; c.fillRect(pad, head, cw - pad * 2, 2 * U);
     items.forEach((it, i) => {
-      const at = it.at ?? (b.start + .6 + i * .9), k = prog(t, at, .45), y = head + 30 * U + i * rowH + rowH / 2;
-      const next = items[i + 1]?.at ?? b.end, active = t >= at && t < next;
-      if (active || k > 0) { const ak = active ? eOut(prog(t, at, .35)) : clamp(1 - prog(t, next, .3)); if (ak > 0) { c.save(); c.globalAlpha = ak; c.fillStyle = hexA(it.bad ? C.red : C.yellow, it.bad ? .1 : .22); roundRect(c, pad - 16 * U, y - rowH * .42, (cw - pad * 2 + 32 * U) * eOut(ak), rowH * .84, 16 * U); c.fill(); c.restore(); } }
-      const bx = pad + iSize * .55;
-      c.save(); c.beginPath(); c.arc(bx, y, iSize * .55, 0, Math.PI * 2);
-      if (k > 0) { c.fillStyle = it.bad ? C.red : C.green; c.globalAlpha = eOut(k); c.fill(); c.globalAlpha = 1; drawTick(c, bx, y, iSize * .42, prog(t, at + .05, .3), '#fff', it.bad); }
-      else { c.strokeStyle = '#CFCAC2'; c.lineWidth = 3 * U; c.stroke(); c.fillStyle = C.mute; c.font = font(iSize * .55, 800); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(i + 1), bx, y + 1 * U); }
+      const a = at(it, i), k = prog(t, a - .1, .4), y = head + 30 * U + i * rowH + rowH / 2;
+      const next = items[i + 1] ? at(items[i + 1], i + 1) : b.end, active = t >= a - .1 && t < next - .1;
+      if (active || k > 0) { const ak = active ? eOut(prog(t, a - .1, .35)) : clamp(1 - prog(t, next - .1, .3)); if (ak > 0) { c.save(); c.globalAlpha = ak; c.fillStyle = hexA(it.bad ? C.red : C.yellow, it.bad ? .1 : .22); roundRect(c, pad - 16 * U, y - rowH * .42, (cw - pad * 2 + 32 * U) * eOut(ak), rowH * .84, 16 * U); c.fill(); c.restore(); } }
+      const bx = pad + iSize * .55, br = iSize * .55;
+      c.save(); c.beginPath(); c.arc(bx, y, br, 0, Math.PI * 2);
+      if (k > 0) { c.fillStyle = it.bad ? C.red : C.green; c.globalAlpha = eOut(k); c.fill(); c.globalAlpha = 1; drawTick(c, bx, y, br * .5, prog(t, a - .05, .3), '#fff', it.bad); }
+      else { c.strokeStyle = '#D3D1CC'; c.lineWidth = 3 * U; c.stroke(); c.fillStyle = C.mute; c.font = font(iSize * .5, 800); glyph(c, String(i + 1), bx, y); }
       c.restore();
-      c.save(); c.globalAlpha = lerp(.38, 1, eOut(k)); const bl = (1 - eOut(k)) * 7 * U; if (bl > .3) c.filter = `blur(${bl.toFixed(1)}px)`;
-      const f = fitWrap(c, it.text, cw - pad * 2 - iSize * 1.9, iSize, 700, SANS, 1); c.font = font(f.size, 700); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'middle';
-      txt(c, f.lines[0], pad + iSize * 1.6, y); c.restore();
-      if (it.note && k > 0) { c.save(); c.globalAlpha = eOut(prog(t, at + .25, .4)); c.font = font(iSize * .58, 700); const nw = c.measureText(it.note).width; chip(c, cw - pad - nw - 30 * U, y, it.note, it.bad ? C.red : C.green, { size: iSize * .5 }); c.restore(); }
+      c.save(); c.globalAlpha = lerp(.3, 1, eOut(k)); const bl = (1 - eOut(k)) * 16 * U; if (bl > .3) c.filter = `blur(${bl.toFixed(1)}px)`;
+      const f = fitWrap(c, it.text, cw - pad * 2 - iSize * 1.9, iSize, 700, SANS, 1); c.font = font(f.size, 700); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+      txt(c, f.lines[0], pad + iSize * 1.6, midBase(c, y)); c.restore();
+      if (it.note && k > 0) { c.save(); c.globalAlpha = eOut(prog(t, a + .25, .4)); c.font = font(iSize * .58, 700); const nw = c.measureText(it.note).width; chip(c, cw - pad - nw - 30 * U, y, it.note, it.bad ? C.red : C.green, { size: iSize * .5 }); c.restore(); }
     });
-    // progress bar along the bottom
-    const pk = items.length ? items.reduce((a, it, i) => a + eIO(prog(t, it.at ?? (b.start + .6 + i * .9), .7)), 0) / items.length : 0;   // glides step to step c.fillStyle = '#EEEAE3'; roundRect(c, pad, ch - 52 * U, cw - pad * 2, 12 * U, 6 * U); c.fill();
+    // progress bar along the bottom: glides from step to step
+    const pk = items.length ? items.reduce((s2, it, i) => s2 + eIO(prog(t, at(it, i) - .1, .6)), 0) / items.length : 0;
+    c.fillStyle = '#EFEEEB'; roundRect(c, pad, ch - 52 * U, cw - pad * 2, 12 * U, 6 * U); c.fill();
     c.fillStyle = C.green; roundRect(c, pad, ch - 52 * U, Math.max(12 * U, (cw - pad * 2) * pk), 12 * U, 6 * U); c.fill();
-    gl3d(g, G => drawCard(G, L.card, cw, ch, pose(t, b, { ry: -4, rx: 4 })));
-    foreground(g, t, b);
+    gl3d(g, G => drawCard(G, L.card, cw, ch, pose(t, b)));
   },
 
-  // two cards facing each other. Tone per side: good / bad / neutral (a neutral pair has no ticks or crosses).
+  // two cards side by side. Tone per side: good / bad / neutral (a neutral pair has no ticks or crosses).
   // A column can show a small mock instead of bare lines (mock: short | long | thread | video | carousel | chart).
   compare(g, t, b) {
-    stage(g, t, b, { palette: 'cool' });
-    const cols = [b.left || {}, b.right || {}], cw = V ? W * .86 : W * .4, iSize = (V ? 50 : 48) * U;
+    stage(g, t, b);
+    const cols = [b.left || {}, b.right || {}], cw = V ? W * .86 : W * .4, iSize = (V ? 50 : 48) * U, rowH = iSize * 1.7;
     const tone = ci => cols[ci].tone || (b.right_bad === false || b.neutral ? 'neutral' : ci === 1 ? 'bad' : 'good');
     const col = ci => ({ good: C.green, bad: C.red, neutral: [C.blue, C.chart2][ci] })[tone(ci)];
-    const canv = [L.card, L.card2];
-    const sizes = cols.map((cc, ci) => {
-      const n = (cc.items || []).length, mockH = cc.mock ? 340 * U : 0, ch = 190 * U + mockH + n * iSize * 1.9 + 60 * U;
-      const c = clear(canv[ci]); cardBase(c, cw, ch);
-      const pad = 54 * U, hk = prog(t, (cc.at ?? b.start + ci * .45), .45);
+    const canv = [L.card, L.card2], pad = 54 * U, top = 190 * U;
+    // both cards get the same height (the taller one's): side by side they read as a pair
+    const need = cols.map(cc => top + (cc.mock ? 340 * U : 0) + (cc.items || []).length * rowH + (cc.items?.length ? 34 * U : 20 * U));
+    const ch = Math.max(...need);
+    cols.forEach((cc, ci) => {
+      const mockH = cc.mock ? 340 * U : 0, c = clear(canv[ci]); cardBase(c, cw, ch);
+      const hk = prog(t, (cc.at ?? b.start + ci * .45), .45);
       c.save(); roundRect(c, 0, 0, cw, ch, 28 * U); c.clip(); c.fillStyle = hexA(col(ci), .12); c.fillRect(0, 0, cw, 150 * U); c.fillStyle = col(ci); c.fillRect(0, 0, cw, 8 * U); c.restore();
       withReveal(c, hk, () => {
-        const glyph = cc.icon || (tone(ci) === 'good' ? '✓' : tone(ci) === 'bad' ? '✕' : null);
-        if (glyph) { c.save(); c.fillStyle = cc.icon ? '#fff' : col(ci); c.beginPath(); c.arc(pad + 34 * U, 82 * U, 34 * U, 0, Math.PI * 2); c.fill();
-          if (cc.icon) { c.fillStyle = C.ink; c.font = font(36 * U, 800); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(cc.icon, pad + 34 * U, 84 * U); } else drawTick(c, pad + 34 * U, 82 * U, 22 * U, 1, '#fff', tone(ci) === 'bad'); c.restore(); }
-        const tx = pad + (glyph ? 90 * U : 0), f = fitWrap(c, cc.title || '', cw - tx - pad, 64 * U, 800, SANS, 1);
-        c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'middle'; txt(c, f.lines[0], tx, 84 * U);
+        const sym = cc.icon || (tone(ci) === 'good' ? '✓' : tone(ci) === 'bad' ? '✕' : null), hy = 82 * U;
+        if (sym) { c.save(); c.fillStyle = cc.icon ? '#fff' : col(ci); c.beginPath(); c.arc(pad + 34 * U, hy, 34 * U, 0, Math.PI * 2); c.fill();
+          if (cc.icon) { c.fillStyle = C.ink; c.font = font(34 * U, 800); glyph(c, cc.icon, pad + 34 * U, hy); } else drawTick(c, pad + 34 * U, hy, 17 * U, 1, '#fff', tone(ci) === 'bad'); c.restore(); }
+        const tx = pad + (sym ? 90 * U : 0), f = fitWrap(c, cc.title || '', cw - tx - pad, 64 * U, 800, SANS, 1);
+        c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'alphabetic'; txt(c, f.lines[0], tx, midBase(c, hy));
       }, 8 * U);
-      let y = 190 * U;
+      let y = top;
       if (cc.mock) { const mk = eOut(prog(t, (cc.at ?? b.start + ci * .45) + .2, .6)); c.save(); c.globalAlpha = mk; mock(c, cc.mock, pad, y - 10 * U, cw - pad * 2, mockH - 30 * U, col(ci), t, mk); c.restore(); y += mockH; }
       (cc.items || []).forEach((it, i) => {
-        const at = it.at ?? (b.start + .8 + i * .7 + ci * 1.6), k = prog(t, at, .4), yy = y + i * iSize * 1.9 + iSize * .5;
-        c.save(); c.globalAlpha = lerp(.35, 1, eOut(k)); const bl = (1 - eOut(k)) * 6 * U; if (bl > .3) c.filter = `blur(${bl.toFixed(1)}px)`;
+        const at = it.at ?? (b.start + .8 + i * .7 + ci * 1.6), k = prog(t, at - .1, .4), yy = y + i * rowH + rowH / 2;
+        c.save(); c.globalAlpha = lerp(.3, 1, eOut(k)); const bl = (1 - eOut(k)) * 14 * U; if (bl > .3) c.filter = `blur(${bl.toFixed(1)}px)`;
         c.fillStyle = col(ci); c.beginPath(); c.arc(pad + 8 * U, yy, 8 * U, 0, Math.PI * 2); c.fill();
-        const f = fitWrap(c, it.text, cw - pad * 2 - 34 * U, iSize, 600, SANS, 1); c.font = font(f.size, 600); c.fillStyle = C.ink2; c.textAlign = 'left'; c.textBaseline = 'middle'; txt(c, f.lines[0], pad + 34 * U, yy); c.restore();
+        const f = fitWrap(c, it.text, cw - pad * 2 - 34 * U, iSize, 600, SANS, 1); c.font = font(f.size, 600); c.fillStyle = C.ink2; c.textAlign = 'left'; c.textBaseline = 'alphabetic'; txt(c, f.lines[0], pad + 34 * U, midBase(c, yy)); c.restore();
       });
-      return ch;
     });
     gl3d(g, G => {
-      if (V) { drawCard(G, canv[0], cw, sizes[0], pose(t, b, { y: H * .29, ry: -2, rx: 6, seed: 1 })); drawCard(G, canv[1], cw, sizes[1], pose({ ...t } && t, { ...b, start: b.start + .3 }, { y: H * .71, ry: 2, rx: -4, seed: 2 })); }
-      else { drawCard(G, canv[0], cw, sizes[0], pose(t, b, { x: W * .29, ryFrom: 30, ry: 9, seed: 1 })); drawCard(G, canv[1], cw, sizes[1], pose(t, { ...b, start: b.start + .3 }, { x: W * .71, ryFrom: -30, ry: -9, seed: 2 })); }
+      if (V) { drawCard(G, canv[0], cw, ch, pose(t, b, { y: H * .29 })); drawCard(G, canv[1], cw, ch, pose(t, { ...b, start: b.start + .3 }, { y: H * .71 })); }
+      else { drawCard(G, canv[0], cw, ch, pose(t, b, { x: W * .28 })); drawCard(G, canv[1], cw, ch, pose(t, { ...b, start: b.start + .3 }, { x: W * .72 })); }
     });
     // VS badge
     const vk = eBack(prog(t, b.start + .5, .4));
-    if (vk > 0 && b.vs !== false) { g.save(); g.translate(W / 2, V ? H / 2 : H * .5); g.scale(vk, vk); shadow(g, 30 * U, 10 * U, .25); g.fillStyle = C.ink; g.beginPath(); g.arc(0, 0, 52 * U, 0, Math.PI * 2); g.fill(); noShadow(g);
-      g.fillStyle = '#fff'; g.font = font(40 * U, 800); g.textAlign = 'center'; g.textBaseline = 'middle'; txt(g, 'VS', 0, 2 * U); g.restore(); }
-    foreground(g, t, b, { palette: 'cool' });
+    if (vk > 0 && b.vs !== false) { g.save(); g.translate(W / 2, H / 2); g.scale(vk, vk); shadow(g, 30 * U, 10 * U, .2); g.fillStyle = C.ink; g.beginPath(); g.arc(0, 0, 52 * U, 0, Math.PI * 2); g.fill(); noShadow(g);
+      g.fillStyle = '#fff'; g.font = font(40 * U, 800); g.textAlign = 'left'; g.textBaseline = 'alphabetic'; const vw = g.measureText('VS').width; txt(g, 'VS', -vw / 2, midBase(g, 0)); g.restore(); }
   },
 
-  // a search bar typing over a grid of thumbnails, filmed off a real monitor: perspective, bezel, glare, depth of field
-  search(g, t, b) {
+  // a search bar typing over a grid of video thumbnails (stills of the presenter's own take), in a browser window on white
+  async search(g, t, b) {
     const ui = clear(L.ui);
-    ui.fillStyle = '#F4F4F4'; ui.fillRect(0, 0, W, H);
-    thumbGrid(ui, t, b);
-    const top = ui.createLinearGradient(0, 0, 0, H * .62); top.addColorStop(0, 'rgba(244,244,244,1)'); top.addColorStop(.6, 'rgba(244,244,244,.9)'); top.addColorStop(1, 'rgba(244,244,244,0)');
+    ui.fillStyle = '#FFFFFF'; ui.fillRect(0, 0, W, H);
+    await thumbGrid(ui);
+    const top = ui.createLinearGradient(0, 0, 0, H * .62); top.addColorStop(0, 'rgba(255,255,255,1)'); top.addColorStop(.6, 'rgba(255,255,255,.92)'); top.addColorStop(1, 'rgba(255,255,255,0)');
     ui.fillStyle = top; ui.fillRect(0, 0, W, H * .7);
-    // a browser chrome strip
-    ui.fillStyle = '#E6E6E6'; ui.fillRect(0, 0, W, 64 * U); ['#FF5F57', '#FEBC2E', '#28C840'].forEach((cc, i) => { ui.fillStyle = cc; ui.beginPath(); ui.arc(36 * U + i * 30 * U, 32 * U, 9 * U, 0, Math.PI * 2); ui.fill(); });
-    ui.fillStyle = '#fff'; roundRect(ui, 160 * U, 14 * U, W * .45, 36 * U, 18 * U); ui.fill();
+    browserChrome(ui);
     const bw = V ? W * .86 : W * .62, bh = (V ? 96 : 88) * U, bx = (W - bw) / 2, by = V ? H * .28 : H * .2;
-    ui.save(); shadow(ui, 30 * U, 8 * U, .12); ui.fillStyle = '#fff'; roundRect(ui, bx, by, bw, bh, bh / 2); ui.fill(); ui.restore();
-    ui.strokeStyle = '#CFCFCF'; ui.lineWidth = 2 * U; roundRect(ui, bx, by, bw, bh, bh / 2); ui.stroke();
+    ui.save(); shadow(ui, 30 * U, 8 * U, .1); ui.fillStyle = '#fff'; roundRect(ui, bx, by, bw, bh, bh / 2); ui.fill(); ui.restore();
+    ui.strokeStyle = '#D5D5D5'; ui.lineWidth = 2 * U; roundRect(ui, bx, by, bw, bh, bh / 2); ui.stroke();
     const mx = bx + bh * .55, my = by + bh / 2; ui.strokeStyle = '#555'; ui.lineWidth = 3.4 * U;
     ui.beginPath(); ui.arc(mx, my - 3 * U, bh * .16, 0, Math.PI * 2); ui.stroke(); ui.beginPath(); ui.moveTo(mx + bh * .12, my + bh * .1); ui.lineTo(mx + bh * .24, my + bh * .22); ui.stroke();
     const q = b.query || '', typed = typeText(t, b.start + .3, q, b.cps || 16);
     const fs = fitFont(ui, q, bw - bh * 1.7, (V ? 40 : 38) * U, 500);
-    ui.font = font(fs, 500); ui.fillStyle = typed.s ? '#111' : '#9a9a9a'; ui.textBaseline = 'middle'; ui.textAlign = 'left';
-    txt(ui, typed.s || 'Search', bx + bh, my);
+    ui.font = font(fs, 500); ui.fillStyle = typed.s ? '#111' : '#9a9a9a'; ui.textBaseline = 'alphabetic'; ui.textAlign = 'left';
+    txt(ui, typed.s || 'Search', bx + bh, midBase(ui, my));
     if (Math.floor(t * 2.2) % 2 === 0 || typed.caret) { const cw = ui.measureText(typed.s).width; ui.fillStyle = '#111'; ui.fillRect(bx + bh + cw + 3 * U, my - fs * .6, 2.5 * U, fs * 1.2); }
     const sugg = b.suggestions || [];
     if (typed.s.length > 2 && sugg.length) {
       const k = eOut(prog(t, b.start + .3 + 3 / (b.cps || 16), .3)), rowH = (V ? 62 : 56) * U, dh = (sugg.length * rowH + 24 * U) * k;
       ui.save(); shadow(ui, 24 * U, 6 * U, .1); ui.fillStyle = '#fff'; roundRect(ui, bx, by + bh + 10 * U, bw, dh, 18 * U); ui.fill(); ui.restore();
       ui.save(); ui.beginPath(); ui.rect(bx, by + bh + 10 * U, bw, dh); ui.clip();
-      sugg.forEach((s, i) => {
-        const yy = by + bh + 22 * U + i * rowH + rowH / 2, sf = fitFont(ui, s, bw - bh * 1.4, fs * .88, 500); ui.font = font(sf, 500);
-        const pre = s.toLowerCase().startsWith(typed.s.toLowerCase()) ? s.slice(0, typed.s.length) : '';
-        ui.fillStyle = '#111'; txt(ui, pre, bx + bh, yy); ui.fillStyle = '#6b6b6b'; txt(ui, s.slice(pre.length), bx + bh + ui.measureText(pre).width, yy);
-        ui.strokeStyle = '#999'; ui.lineWidth = 2 * U; ui.beginPath(); ui.arc(bx + bh * .5, yy - 2 * U, 9 * U, 0, Math.PI * 2); ui.stroke();
+      sugg.forEach((s2, i) => {
+        const yy = by + bh + 22 * U + i * rowH + rowH / 2, sf = fitFont(ui, s2, bw - bh * 1.4, fs * .88, 500); ui.font = font(sf, 500);
+        const pre = s2.toLowerCase().startsWith(typed.s.toLowerCase()) ? s2.slice(0, typed.s.length) : '', base = midBase(ui, yy);
+        ui.fillStyle = '#111'; txt(ui, pre, bx + bh, base); ui.fillStyle = '#6b6b6b'; txt(ui, s2.slice(pre.length), bx + bh + ui.measureText(pre).width, base);
+        ui.strokeStyle = '#999'; ui.lineWidth = 2 * U; ui.beginPath(); ui.arc(bx + bh * .5, yy, 9 * U, 0, Math.PI * 2); ui.stroke();
       });
       ui.restore();
     }
-    monitorShot(g, t, b);
+    windowShot(g, t, b);
   },
 
   // analytics: a KPI card (the number counts, the chart draws, a note pins the moment) and small tiles at other depths
   stat(g, t, b) {
-    stage(g, t, b, { bg: '#F2F3F5', palette: 'cool', texture: .12 });
+    stage(g, t, b);
     const cw = V ? W * .88 : W * .6, ch = V ? H * .44 : H * .66, c = clear(L.card); cardBase(c, cw, ch, { r: 30 * U });
     const pad = 56 * U, k0 = prog(t, b.start + .05, .5), col = b.color || C.chart;
     withReveal(c, k0, () => { const f = fitWrap(c, b.label || '', cw - pad * 2, 36 * U, 700, SANS, 1); c.font = font(f.size, 700); c.fillStyle = C.mute; c.textAlign = 'left'; c.textBaseline = 'alphabetic'; txt(c, f.lines[0], pad, pad + 30 * U); }, 8 * U);
@@ -311,40 +259,46 @@ const SCENES = {
       const vs = fitFont(tc, tl.value, tw - 64 * U, 60 * U, 800); tc.font = font(vs, 800); tc.fillStyle = C.ink; txt(tc, tl.value, 32 * U, 128 * U);
       if (tl.delta) { tc.font = font(24 * U, 800); tc.fillStyle = String(tl.delta).startsWith('-') ? C.red : C.green; tc.textAlign = 'right'; txt(tc, tl.delta, tw - 30 * U, 54 * U); } });
     gl3d(g, G => {
-      const main = pose(t, b, { ry: V ? 0 : -6, rx: 4, x: V ? W / 2 : W * .44 });
-      tiles.forEach((tl, i) => drawCard(G, [L.card2, L.card3][i], tw, th, pose(t, { ...b, start: b.start + .5 + i * .25 }, V ? { x: W * (i ? .7 : .3), y: H * .82, z: -60, ry: 0, rx: 5, seed: 3 + i } : { x: W * .83, y: H * (i ? .66 : .34), z: -140 + i * 40, ry: -14, rx: 3, seed: 3 + i, zFrom: 600 })));
+      const main = pose(t, b, { x: V ? W / 2 : (tiles.length ? W * .4 : W / 2) });
+      tiles.forEach((tl, i) => drawCard(G, [L.card2, L.card3][i], tw, th, pose(t, { ...b, start: b.start + .5 + i * .25 }, V ? { x: W * (i ? .7 : .3), y: H * .82 } : { x: W * .83, y: H * (i ? .64 : .36) })));
       drawCard(G, L.card, cw, ch, main);
     });
-    foreground(g, t, b, { palette: 'cool' });
   },
 
-  // a whiteboard in perspective: hub with a pulse, curved branches drawing out to coloured pills (icon, small sub line)
+  // a whiteboard: hub with a pulse, curved branches drawing out to coloured pills (icon, small sub line). A branch
+  // grows just before its word and its pill lands on the word.
   mindmap(g, t, b) {
-    stage(g, t, b, { palette: 'cool', bg: '#EEF0F4', texture: .1 });
+    stage(g, t, b);
     const bw = W * .9, bh = H * .84, c = clear(L.card); cardBase(c, bw, bh, { r: 36 * U, fill: '#FFFFFF' });
-    c.save(); c.fillStyle = 'rgba(30,40,60,.08)'; const sp = 40 * U; for (let x = sp; x < bw; x += sp) for (let y = sp; y < bh; y += sp) { c.beginPath(); c.arc(x, y, 2 * U, 0, Math.PI * 2); c.fill(); } c.restore();
+    c.save(); c.fillStyle = 'rgba(30,40,60,.07)'; const sp = 40 * U; for (let x = sp; x < bw; x += sp) for (let y = sp; y < bh; y += sp) { c.beginPath(); c.arc(x, y, 2 * U, 0, Math.PI * 2); c.fill(); } c.restore();
     const nodes = b.nodes || [], cx = bw / 2, cy = bh / 2, hubR = (V ? 170 : 160) * U;
     const fs = (V ? 54 : 56) * U, pos = nodes.map((n, i) => {
       const ang = (n.angle ?? (-90 + 360 * i / nodes.length + (nodes.length % 2 ? 0 : 45))) * DEG;
-      return [cx + Math.cos(ang) * bw * (V ? .3 : .3), cy + Math.sin(ang) * bh * (V ? .34 : .32)];
+      return [cx + Math.cos(ang) * bw * .3, cy + Math.sin(ang) * bh * .32];
     });
     nodes.forEach((n, i) => {
-      const at = n.at ?? (b.start + .5 + i * .8), k = prog(t, at, .5); if (k <= 0) return;
-      const [nx, ny] = pos[i], lk = eOut(clamp(k * 1.5)), mx = (cx + nx) / 2 + (ny - cy) * .18, my = (cy + ny) / 2 - (nx - cx) * .18;
-      const bez = u => [(1 - u) * (1 - u) * cx + 2 * (1 - u) * u * mx + u * u * nx, (1 - u) * (1 - u) * cy + 2 * (1 - u) * u * my + u * u * ny];
-      c.strokeStyle = hexA(n.color || C.pills[i % C.pills.length], .9); c.lineWidth = 4 * U; c.lineCap = 'round'; c.beginPath();
-      for (let s = 0; s <= 24; s++) { const [x, y] = bez(s / 24 * lk); s ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
-      const dk = (t * .6 + i * .37) % 1; if (lk >= 1) { const [x, y] = bez(dk); c.fillStyle = n.color || C.pills[i % C.pills.length]; c.beginPath(); c.arc(x, y, 6 * U, 0, Math.PI * 2); c.fill(); }
-      const pk = eBack(prog(t, at + .2, .4)); if (pk <= 0) return;
-      const f = fitWrap(c, n.text, (V ? bw * .5 : bw * .26), fs, 800, SANS, 2), lines = f.lines;
-      c.font = font(f.size, 800); const iw = n.icon ? f.size * 1.5 : 0, tw = Math.max(...lines.map(l => c.measureText(l).width)) + iw, ph = (lines.length * f.size * 1.15) + 44 * U + (n.sub ? 34 * U : 0), pw = tw + 64 * U;
-      const px = clamp(nx, pw / 2 + 30 * U, bw - pw / 2 - 30 * U), py = clamp(ny, ph / 2 + 30 * U, bh - ph / 2 - 30 * U);
+      const at = n.at ?? (b.start + .5 + i * .8), k = prog(t, at - .45, .35); if (k <= 0) return;
+      const col = n.color || C.pills[i % C.pills.length];
+      // the pill: one line when it fits at a good size, else two
+      let f = fitWrap(c, n.text, V ? bw * .6 : bw * .36, fs, 800, SANS, 1, fs * .82);
+      if (f.size <= fs * .82 + .5) f = fitWrap(c, n.text, V ? bw * .5 : bw * .28, fs, 800, SANS, 2);
+      const lines = f.lines; c.font = font(f.size * .95, 700);
+      const iw = n.icon ? (() => { const m = c.measureText(n.icon); return m.actualBoundingBoxLeft + m.actualBoundingBoxRight + f.size * .38; })() : 0;
+      c.font = font(f.size, 800); const tw = Math.max(...lines.map(l => c.measureText(l).width)) + iw, ph = (lines.length * f.size * 1.15) + 44 * U + (n.sub ? 34 * U : 0), pw = tw + 64 * U;
+      const [nx, ny] = pos[i], dir = Math.abs(nx - cx) < 40 * U ? 0 : Math.sign(nx - cx);
+      const px = clamp(nx + dir * pw * .3, pw / 2 + 30 * U, bw - pw / 2 - 30 * U), py = clamp(ny, ph / 2 + 30 * U, bh - ph / 2 - 30 * U);
+      const ex = px - dir * pw * .45, ey = py, mx = (cx + ex) / 2 + (ey - cy) * .18, my = (cy + ey) / 2 - (ex - cx) * .18, lk = eIO(k);
+      const bez = u => [(1 - u) * (1 - u) * cx + 2 * (1 - u) * u * mx + u * u * ex, (1 - u) * (1 - u) * cy + 2 * (1 - u) * u * my + u * u * ey];
+      c.strokeStyle = hexA(col, .9); c.lineWidth = 4 * U; c.lineCap = 'round'; c.beginPath();
+      for (let s2 = 0; s2 <= 24; s2++) { const [x, y] = bez(s2 / 24 * lk); s2 ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
+      const pk = eBack(prog(t, at - .12, .36)); if (pk <= 0) return;
       c.save(); c.translate(px, py); c.scale(pk, pk); shadow(c, 22 * U, 8 * U, .14);
-      c.fillStyle = n.color || C.pills[i % C.pills.length]; roundRect(c, -pw / 2, -ph / 2, pw, ph, Math.min(ph / 2, 40 * U)); c.fill(); noShadow(c);
-      c.fillStyle = '#fff'; c.textAlign = 'left'; c.textBaseline = 'middle'; let ty = -ph / 2 + 22 * U + f.size * .58;
-      if (n.icon) { c.font = font(f.size * 1.05, 700); c.fillText(n.icon, -pw / 2 + 30 * U, ty); }
-      c.font = font(f.size, 800); lines.forEach((l, li) => txt(c, l, -pw / 2 + 32 * U + iw, ty + li * f.size * 1.15));
-      if (n.sub) { c.font = font(24 * U, 600); c.fillStyle = 'rgba(255,255,255,.85)'; txt(c, n.sub, -pw / 2 + 32 * U + iw, ph / 2 - 30 * U); }
+      c.fillStyle = col; roundRect(c, -pw / 2, -ph / 2, pw, ph, Math.min(ph / 2, 40 * U)); c.fill(); noShadow(c);
+      c.fillStyle = '#fff'; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+      const ty = -ph / 2 + 22 * U + f.size * .58, x0 = -pw / 2 + 32 * U;
+      if (n.icon) { c.font = font(f.size * .95, 700); glyph(c, n.icon, x0 + (iw - f.size * .38) / 2, ty); }
+      c.font = font(f.size, 800); lines.forEach((l, li) => txt(c, l, x0 + iw, midBase(c, ty + li * f.size * 1.15)));
+      if (n.sub) { c.font = font(24 * U, 600); c.fillStyle = 'rgba(255,255,255,.85)'; txt(c, n.sub, x0 + iw, ph / 2 - 24 * U); }
       c.restore();
     });
     const hk = eBack(prog(t, b.start + .05, .45)), pulse = (t - b.start) % 1.6 / 1.6;
@@ -352,36 +306,35 @@ const SCENES = {
     c.strokeStyle = hexA(b.hubColor || C.hub, .35 * (1 - pulse)); c.lineWidth = 6 * U; c.beginPath(); c.arc(0, 0, hubR * (1 + pulse * .5), 0, Math.PI * 2); c.stroke();
     shadow(c, 30 * U, 10 * U, .18); const hg = c.createLinearGradient(0, -hubR, 0, hubR); hg.addColorStop(0, shade(b.hubColor || C.hub, .15)); hg.addColorStop(1, shade(b.hubColor || C.hub, -.12));
     c.fillStyle = hg; c.beginPath(); c.arc(0, 0, hubR, 0, Math.PI * 2); c.fill(); noShadow(c);
-    const hf = fitWrap(c, b.center || '', hubR * 1.5, 50 * U, 800, SANS, 3); c.font = font(hf.size, 800); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    hf.lines.forEach((ln, i, a) => txt(c, ln, 0, (i - (a.length - 1) / 2) * hf.size * 1.1)); c.restore();
-    gl3d(g, G => drawCard(G, L.card, bw, bh, pose(t, b, { s: 1, rxFrom: 22, rx: 8, ryFrom: -10, ry: -2, dolly: 100, shadow: .22 })));
-    foreground(g, t, b, { palette: 'cool' });
+    const hf = fitWrap(c, b.center || '', hubR * 1.5, 50 * U, 800, SANS, 3); c.font = font(hf.size, 800); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    hf.lines.forEach((ln, i, a2) => txt(c, ln, 0, midBase(c, (i - (a2.length - 1) / 2) * hf.size * 1.1))); c.restore();
+    gl3d(g, G => drawCard(G, L.card, bw, bh, pose(t, b, { dolly: 80 })));
   },
 
   // bar chart: bars grow on their words, values count, one bar can be the hero
   bars(g, t, b) {
-    stage(g, t, b, { bg: '#F3F1EC' });
+    stage(g, t, b);
     const bars = b.bars || [], cw = V ? W * .88 : W * .62, ch = V ? H * .5 : H * .72, c = clear(L.card); cardBase(c, cw, ch);
     const pad = 60 * U, max = Math.max(...bars.map(x => x.value), 1);
-    withReveal(c, prog(t, b.start, .45), () => { const f = fitWrap(c, b.title || '', cw - pad * 2, 52 * U, 800, SANS, 1); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'middle'; txt(c, f.lines[0], pad, pad + 26 * U); });
-    const top = pad + 100 * U, gh = ch - top - pad - 70 * U, gw = cw - pad * 2, slot = gw / Math.max(1, bars.length), bw = Math.min(150 * U, slot * .56);
+    withReveal(c, prog(t, b.start, .45), () => { const f = fitWrap(c, b.title || '', cw - pad * 2, 52 * U, 800, SANS, 1); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'alphabetic'; txt(c, f.lines[0], pad, midBase(c, pad + 26 * U)); });
+    // the tallest bar stops well below the title (its value label needs the room); a small value still reads as a bar
+    const top = pad + 120 * U, gh = ch - top - pad - 70 * U, gw = cw - pad * 2, slot = gw / Math.max(1, bars.length), bw = Math.min(150 * U, slot * .56);
     c.strokeStyle = '#ECE8E2'; c.lineWidth = 2 * U; for (let i = 0; i <= 4; i++) { const y = top + gh * i / 4; c.beginPath(); c.moveTo(pad, y); c.lineTo(pad + gw, y); c.stroke(); }
     bars.forEach((x, i) => {
-      const at = x.at ?? (b.start + .4 + i * .35), k = eOut(prog(t, at, .7)), h = gh * x.value / max * k, bx = pad + slot * i + (slot - bw) / 2, hero = b.hero === i || x.hero;
+      const at = x.at ?? (b.start + .4 + i * .35), k = eOut(prog(t, at - .15, .7)), h = gh * .84 * Math.max(x.value / max, x.value > 0 ? .12 : 0) * k, bx = pad + slot * i + (slot - bw) / 2, hero = b.hero === i || x.hero;
       const col = x.color || (hero ? (b.color || C.accent) : (b.hero !== undefined ? '#C9C4BB' : C.pills[i % C.pills.length]));
       const gr = c.createLinearGradient(0, top + gh - h, 0, top + gh); gr.addColorStop(0, shade(col, .12)); gr.addColorStop(1, shade(col, -.08));
-      c.save(); if (hero) { c.shadowColor = hexA(col, .45); c.shadowBlur = 30 * U; } c.fillStyle = gr; roundRect(c, bx, top + gh - h, bw, h, [12 * U, 12 * U, 0, 0]); c.fill(); c.restore();
-      if (k > .05) { c.font = font(34 * U, 800); c.fillStyle = C.ink; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; const lab = x.display ?? ((x.prefix ?? b.prefix ?? '') + fmtNum(x.value * k, x.decimals ?? b.decimals ?? 0) + (x.suffix ?? b.suffix ?? '')); c.font = font(fitFont(c, lab, slot * .96, 34 * U, 800), 800); c.globalAlpha = x.display ? clamp(k * 1.5) : 1; txt(c, lab, bx + bw / 2, top + gh - h - 14 * U); c.globalAlpha = 1; }
+      c.save(); if (hero) { c.shadowColor = hexA(col, .3); c.shadowBlur = 20 * U; c.shadowOffsetY = 6 * U; } c.fillStyle = gr; roundRect(c, bx, top + gh - h, bw, h, [12 * U, 12 * U, 0, 0]); c.fill(); c.restore();
+      if (k > .05) { c.font = font(34 * U, 800); c.fillStyle = C.ink; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; const lab = x.display ?? ((x.prefix ?? b.prefix ?? '') + fmtNum(x.value * k, x.decimals ?? b.decimals ?? 0) + (x.suffix ?? b.suffix ?? '')); c.font = font(fitFont(c, lab, slot * .96, 34 * U, 800), 800); c.globalAlpha = x.display ? clamp(k * 1.5) : 1; txt(c, lab, bx + bw / 2, top + gh - h - 18 * U); c.globalAlpha = 1; }
       const lf = fitWrap(c, x.label, slot * .94, 28 * U, 700, SANS, 2); c.font = font(lf.size, 700); c.fillStyle = hero ? C.ink : C.mute; c.textAlign = 'center'; c.textBaseline = 'top';
       lf.lines.forEach((l, li) => txt(c, l, bx + bw / 2, top + gh + 16 * U + li * lf.size * 1.1));
     });
-    gl3d(g, G => drawCard(G, L.card, cw, ch, pose(t, b, { ry: -5, rx: 5 })));
-    foreground(g, t, b);
+    gl3d(g, G => drawCard(G, L.card, cw, ch, pose(t, b)));
   },
 
   // donut: segments sweep in, a legend lists them, the centre shows the headline number
   donut(g, t, b) {
-    stage(g, t, b, { palette: 'cool' });
+    stage(g, t, b);
     const parts = b.parts || [], cw = V ? W * .88 : W * .62, ch = V ? H * .52 : H * .66, c = clear(L.card); cardBase(c, cw, ch);
     const pad = 60 * U, total = parts.reduce((s, p) => s + p.value, 0) || 1;
     withReveal(c, prog(t, b.start, .45), () => { const f = fitWrap(c, b.title || '', cw - pad * 2, 50 * U, 800, SANS, 1); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'middle'; txt(c, f.lines[0], pad, pad + 24 * U); });
@@ -397,8 +350,7 @@ const SCENES = {
       c.font = font(36 * U, 800); c.textAlign = 'right'; txt(c, Math.round(p.value / total * 100) + '%', cw - pad, ly); c.restore();
     });
     if (b.center) { const ck = prog(t, b.start + .5, .5); withReveal(c, ck, () => { const f = fitWrap(c, b.center, R * 1.1, 64 * U, 800, SANS, 2); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'center'; c.textBaseline = 'middle'; f.lines.forEach((l, i, a) => txt(c, l, ox, oy + (i - (a.length - 1) / 2) * f.size * 1.1)); }); }
-    gl3d(g, G => drawCard(G, L.card, cw, ch, pose(t, b, { ry: -5, rx: 5 })));
-    foreground(g, t, b, { palette: 'cool' });
+    gl3d(g, G => drawCard(G, L.card, cw, ch, pose(t, b)));
   },
 
   // table: rows land one by one, a column (or a row) is the highlighted answer
@@ -423,146 +375,153 @@ const SCENES = {
       });
       c.restore();
     });
-    gl3d(g, G => drawCard(G, L.card, cw, ch, pose(t, b, { ry: -4, rx: 6 })));
-    foreground(g, t, b);
+    gl3d(g, G => drawCard(G, L.card, cw, ch, pose(t, b)));
   },
 
-  // roadmap: a path with stops; the progress line runs to the stop being named and the camera tracks along it
+  // roadmap: a path with stops. The progress line travels to the next stop as it is named, and a stop lights up when
+  // the line reaches it (never before). Names alternate above and below the path with the same spacing on both sides.
   roadmap(g, t, b) {
-    stage(g, t, b, { palette: 'warm' });
+    stage(g, t, b);
     const steps = b.steps || [], n = steps.length, sp = Math.min(520 * U, W * .78 / Math.max(1, n - 1)), bw = W, bh = H * .78, c = clear(L.card);
-    const y = bh * .55, x0 = (W - sp * (n - 1)) / 2, xs = steps.map((s, i) => x0 + i * sp);
-    if (b.title) withReveal(c, prog(t, b.start, .45), () => { const f = fitWrap(c, b.title, W * .7, 72 * U, 800, SANS, 1); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'middle'; txt(c, f.lines[0], Math.max(90 * U, x0 - 60 * U), 110 * U); });
-    const cur = steps.reduce((a, s, i) => t >= (s.at ?? (b.start + .5 + i * 1)) ? i : a, -1);
-    const lineK = cur < 0 ? 0 : cur + eOut(prog(t, steps[cur].at ?? (b.start + .5 + cur), .6)) - 1;
-    c.strokeStyle = '#DDD7CE'; c.lineWidth = 10 * U; c.lineCap = 'round'; c.setLineDash([2 * U, 22 * U]); c.beginPath(); c.moveTo(xs[0], y); c.lineTo(xs[n - 1], y); c.stroke(); c.setLineDash([]);
-    if (lineK > 0) { c.strokeStyle = b.color || C.accent; c.beginPath(); c.moveTo(xs[0], y); c.lineTo(lerp(xs[0], xs[n - 1], lineK / Math.max(1, n - 1)), y); c.stroke(); }
-    steps.forEach((s, i) => {
-      const at = s.at ?? (b.start + .5 + i * 1), k = prog(t, at, .45), on = k > 0, x = xs[i], active = i === cur;
-      const r = (active ? 66 : 54) * U * (on ? lerp(.85, 1, eBack(k)) : .85);
-      c.save(); shadow(c, 20 * U, 8 * U, on ? .18 : .06); c.fillStyle = on ? (s.color || (active ? (b.color || C.accent) : C.ink)) : '#fff'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); noShadow(c);
-      if (!on) { c.strokeStyle = '#D5CFC6'; c.lineWidth = 4 * U; c.stroke(); }
-      c.font = font(r * .8, 800); c.fillStyle = on ? '#fff' : C.mute; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(s.icon || String(i + 1), x, y + 2 * U);
-      if (active) { const pl = ((t - at) % 1.4) / 1.4; c.strokeStyle = hexA(b.color || C.accent, .4 * (1 - pl)); c.lineWidth = 5 * U; c.beginPath(); c.arc(x, y, r * (1 + pl * .7), 0, Math.PI * 2); c.stroke(); }
+    const y = bh * .55, x0 = (W - sp * (n - 1)) / 2, xs = steps.map((s2, i) => x0 + i * sp), col = b.color || C.accent;
+    const at = steps.map((s2, i) => s2.at ?? (b.start + .5 + i * 1));
+    if (b.title) withReveal(c, prog(t, b.start, .45), () => { const f = fitWrap(c, b.title, W * .7, 72 * U, 800, SANS, 1); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'alphabetic'; txt(c, f.lines[0], Math.max(90 * U, x0 - 60 * U), midBase(c, 110 * U)); });
+    // the line: each leg runs in the moments before its stop is named and arrives on the word
+    const leg = i => Math.min(.6, Math.max(.25, (at[i] - at[i - 1]) * .7));
+    let reach = 0; for (let i = 1; i < n; i++) reach += eIO(prog(t, at[i] - leg(i), leg(i)));
+    const cur = steps.reduce((a2, s2, i) => t >= at[i] - .02 ? i : a2, -1);
+    c.strokeStyle = '#E2DED8'; c.lineWidth = 10 * U; c.lineCap = 'round'; c.setLineDash([2 * U, 22 * U]); c.beginPath(); c.moveTo(xs[0], y); c.lineTo(xs[n - 1], y); c.stroke(); c.setLineDash([]);
+    if (reach > 0 && t >= at[0] - .1) { c.strokeStyle = col; c.beginPath(); c.moveTo(xs[0], y); c.lineTo(xs[0] + sp * reach, y); c.stroke(); }
+    const R = 60 * U;
+    steps.forEach((s2, i) => {
+      const k = prog(t, at[i] - .02, .35), on = k > 0, x = xs[i], active = i === cur;
+      const r = R * (on ? lerp(.9, active ? 1.08 : 1, eBack(k)) : .9);
+      c.save(); shadow(c, 20 * U, 8 * U, on ? .16 : .05); c.fillStyle = on ? (s2.color || (active ? col : C.ink)) : '#fff'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); noShadow(c);
+      if (!on) { c.strokeStyle = '#DAD6CF'; c.lineWidth = 4 * U; c.stroke(); }
+      c.font = font(r * .72, 800); c.fillStyle = on ? '#fff' : C.mute; glyph(c, s2.icon || String(i + 1), x, y);
+      if (active) { const pl = ((t - at[i]) % 1.4) / 1.4; c.strokeStyle = hexA(col, .35 * (1 - pl)); c.lineWidth = 5 * U; c.beginPath(); c.arc(x, y, r * (1 + pl * .6), 0, Math.PI * 2); c.stroke(); }
       c.restore();
-      c.save(); c.globalAlpha = lerp(.4, 1, eOut(k)); const bl = (1 - eOut(k)) * 6 * U; if (bl > .3) c.filter = `blur(${bl.toFixed(1)}px)`;
-      const up = i % 2 === 0, f = fitWrap(c, s.text, Math.min(sp * 1.6, 2 * Math.min(xs[i], W - xs[i]) - 40 * U), 50 * U, 800, SANS, 2); c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'center'; c.textBaseline = 'middle';
-      const ty = up ? y - 100 * U - (f.lines.length - 1) * f.size * 1.1 : y + 100 * U;
-      f.lines.forEach((l, li) => txt(c, l, x, ty + li * f.size * 1.1));
-      if (s.label) { c.font = font(32 * U, 700); c.fillStyle = C.mute; txt(c, s.label, x, up ? ty - 50 * U : ty + f.lines.length * f.size * 1.1 + 14 * U); }
+      // the name (and its small label) beside the stop: same distances above and below, measured on capital heights
+      c.save(); const ke = eOut(prog(t, at[i] - .1, .4)); c.globalAlpha = lerp(.35, 1, ke); const bl = (1 - ke) * 12 * U; if (bl > .3) c.filter = `blur(${bl.toFixed(1)}px)`;
+      const up = i % 2 === 0, f = fitWrap(c, s2.text, Math.min(sp * 1.6, 2 * Math.min(xs[i], W - xs[i]) - 40 * U), 50 * U, 800, SANS, 2);
+      const capN = f.size * .72, capL = 30 * U * .72, lh = f.size * 1.12, gapToStop = R * 1.08 + 34 * U, gapLabel = 16 * U;
+      const centres = f.lines.map((l, li) => up ? y - gapToStop - capN / 2 - (f.lines.length - 1 - li) * lh : y + gapToStop + capN / 2 + li * lh);
+      c.font = font(f.size, 800); c.fillStyle = C.ink; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+      f.lines.forEach((l, li) => txt(c, l, x, midBase(c, centres[li])));
+      if (s2.label) { const ly = up ? centres[0] - capN / 2 - gapLabel - capL / 2 : centres[centres.length - 1] + capN / 2 + gapLabel + capL / 2 + f.size * .12;
+        c.font = font(30 * U, 700); c.fillStyle = C.mute; txt(c, s2.label, x, midBase(c, ly)); }
       c.restore();
     });
-    // the whole road fits the frame; the camera only leans a little towards the stop being named
-    const focus = cur < 0 ? xs[0] : lerp(xs[Math.max(0, cur - 1)], xs[cur], eIO(prog(t, steps[cur].at ?? b.start, .8)));
-    const lean = (focus - W / 2) / W;
-    gl3d(g, G => G.plane(L.card, pose(t, b, { w: bw, h: bh, src: [0, 0, bw / L.card.width, bh / L.card.height], x: W / 2 - lean * 60 * U, y: H / 2, ryFrom: -20, ry: -6 + lean * 6, rxFrom: 16, rx: 8, s: .94, dolly: 50 })));
-    foreground(g, t, b);
+    gl3d(g, G => G.plane(L.card, pose(t, b, { w: bw, h: bh, src: [0, 0, bw / L.card.width, bh / L.card.height], s: .94, dolly: 50 })));
   },
 
-  // stock or user photos: one fills the frame with a slow move; two or three float as prints at different depths
+  // stock or user photos: one fills the frame with a slow move; two or three stand side by side on white, whole (never
+  // cropped by the frame), each with a thin white border and a soft shadow
   async photo(g, t, b) {
-    const srcs = (b.srcs || [b.src]).filter(s => IMG[s]);
+    const srcs = (b.srcs || [b.src]).filter(s2 => IMG[s2]);
     if (!srcs.length) { stage(g, t, b); return; }
     const p = prog(t, b.start - .3, b.end - b.start + .6), main = IMG[srcs[0]];
     if (srcs.length === 1 && b.frame !== true) {
-      const s0 = Math.max(W / main.width, H / main.height) * 1.12, s = s0 * lerp(b.zoomFrom ?? 1.0, b.zoomTo ?? 1.08, eIO(p));
-      const dx = lerp(-1, 1, eIO(p)) * (b.pan ?? 30) * U, w = main.width * s, h = main.height * s;
-      g.save(); g.filter = 'contrast(1.05) saturate(1.06)'; g.drawImage(main, W / 2 - w / 2 + dx, H / 2 - h / 2 + (b.panY || 0) * U, w, h); g.restore();
-      vignette(g, .32);
+      const s0 = Math.max(W / main.width, H / main.height) * 1.04, sc = s0 * lerp(b.zoomFrom ?? 1.0, b.zoomTo ?? 1.06, eIO(p));
+      const dx = lerp(-1, 1, eIO(p)) * (b.pan ?? 20) * U, w = main.width * sc, h = main.height * sc;
+      g.save(); g.filter = 'contrast(1.04) saturate(1.04)'; g.drawImage(main, W / 2 - w / 2 + dx, H / 2 - h / 2 + (b.panY || 0) * U, w, h); g.restore();
     } else {
-      const s0 = Math.max(W / main.width, H / main.height) * 1.15;
-      g.save(); g.filter = `blur(${30 * U}px) brightness(.55) saturate(1.2)`; g.drawImage(main, W / 2 - main.width * s0 / 2, H / 2 - main.height * s0 / 2, main.width * s0, main.height * s0); g.restore();
-      gl3d(g, G => srcs.forEach((s, i) => {
-        const im = IMG[s], n = srcs.length, mh = H * (n === 1 ? .7 : .52), mw = Math.min(im.width / im.height * mh, W * (n === 1 ? .8 : .42)), hh = mw / (im.width / im.height);
-        const fr = scratch('print' + i, mw + 24 * U, hh + 24 * U), fg = fr.getContext('2d'); fg.clearRect(0, 0, fr.width, fr.height);
-        fg.fillStyle = '#fff'; roundRect(fg, 0, 0, fr.width, fr.height, 14 * U); fg.fill(); fg.save(); roundRect(fg, 12 * U, 12 * U, mw, hh, 8 * U); fg.clip(); fg.drawImage(im, 12 * U, 12 * U, mw, hh); fg.restore();
-        const xs = n === 1 ? [.5] : n === 2 ? [.3, .7] : [.22, .5, .78], rz = n === 1 ? [-1.5] : [-4, 3, -2];
-        drawCard(G, fr, fr.width, fr.height, pose(t, { ...b, start: b.start + i * .3 }, { x: W * xs[i], y: H * (.5 + (i % 2 ? .04 : -.03)), rz: rz[i], z: -i * 40, ry: n === 1 ? -4 : (i - (n - 1) / 2) * -6, rx: 4, seed: i + 1, shadow: .45 }));
+      stage(g, t, b);
+      const n = srcs.length, gap = 40 * U, ar = srcs.map(s2 => IMG[s2].width / IMG[s2].height), bd = 10 * U;
+      const capRoom = b.caption ? 150 * U : 0, maxW = W * (V ? .9 : .9), maxH = (H - capRoom) * (V ? .3 : .62);
+      // one height for every print, as big as fits: side by side in 16:9, stacked in 9:16
+      let hh = V ? Math.min(maxH, ...ar.map(a2 => maxW / a2)) : Math.min(maxH, (maxW - gap * (n - 1) - bd * 2 * n) / ar.reduce((s2, a2) => s2 + a2, 0));
+      const ws = ar.map(a2 => a2 * hh), total = ws.reduce((s2, w2) => s2 + w2 + bd * 2, 0) + gap * (n - 1);
+      let x = (W - total) / 2;
+      gl3d(g, G => srcs.forEach((s2, i) => {
+        const im = IMG[s2], mw = ws[i], fr = scratch('print' + i, mw + bd * 2, hh + bd * 2), fg = fr.getContext('2d'); fg.clearRect(0, 0, fr.width, fr.height);
+        fg.fillStyle = '#fff'; roundRect(fg, 0, 0, fr.width, fr.height, 16 * U); fg.fill();
+        fg.save(); roundRect(fg, bd, bd, mw, hh, 9 * U); fg.clip(); fg.drawImage(im, bd, bd, mw, hh); fg.restore();
+        fg.strokeStyle = 'rgba(0,0,0,.08)'; fg.lineWidth = 2 * U; roundRect(fg, 1, 1, fr.width - 2, fr.height - 2, 16 * U); fg.stroke();
+        const cxp = V ? W / 2 : x + fr.width / 2, cyp = V ? (H - capRoom) / 2 + (i - (n - 1) / 2) * (hh + bd * 2 + gap) : (H - capRoom) / 2;
+        x += fr.width + gap;
+        drawCard(G, fr, fr.width, fr.height, pose(t, { ...b, start: b.start + i * .25 }, { x: cxp, y: cyp, dolly: 40, shadow: .22 }));
       }));
     }
-    if (b.caption) {
-      const k = eOut(prog(t, b.start + .3, .45)), ko = eIn(prog(t, b.end - .4, .4));
-      g.save(); g.globalAlpha = k * (1 - ko); g.translate((1 - k) * -40 * U, 0); g.font = font(40 * U, 800); const cw = g.measureText(b.caption).width + 56 * U, cx = 70 * U, cy = H - 120 * U;
-      shadow(g, 30 * U, 10 * U, .35); g.fillStyle = 'rgba(255,255,255,.94)'; roundRect(g, cx, cy - 36 * U, cw, 72 * U, 18 * U); g.fill(); noShadow(g);
-      g.fillStyle = C.accent; g.fillRect(cx, cy - 36 * U, 8 * U, 72 * U); g.fillStyle = C.ink; g.textAlign = 'left'; g.textBaseline = 'middle'; txt(g, b.caption, cx + 30 * U, cy + 2 * U); g.restore();
-    }
+    caption(g, t, b);
   },
 
-  // a stock clip (image sequence made by fetch_stock.py) with a slow push; framed in 3D with `frame: true`
+  // a stock clip (image sequence made by fetch_stock.py) with a slow push; as a framed card on white with `frame: true`
   async video(g, t, b) {
     const im = await seqFrame(b.src, t - b.start + (b.offset || 0)); if (!im) { stage(g, t, b); return; }
     const p = prog(t, b.start, b.end - b.start);
     if (!b.frame) {
-      const s = Math.max(W / im.width, H / im.height) * lerp(1.02, 1.1, eIO(p)), w = im.width * s, h = im.height * s;
-      g.save(); g.filter = 'contrast(1.06) saturate(1.05)'; g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h); g.restore(); vignette(g, .3);
+      const sc = Math.max(W / im.width, H / im.height) * lerp(1.02, 1.08, eIO(p)), w = im.width * sc, h = im.height * sc;
+      g.save(); g.filter = 'contrast(1.04) saturate(1.04)'; g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h); g.restore();
     } else {
-      stage(g, t, b, { dark: true }); const mw = W * .72, mh = mw * im.height / im.width;
+      stage(g, t, b); const mw = W * .72, mh = mw * im.height / im.width;
       const fr = scratch('vframe', mw, mh), fg = fr.getContext('2d'); fg.save(); fg.clearRect(0, 0, mw, mh); roundRect(fg, 0, 0, mw, mh, 22 * U); fg.clip(); fg.drawImage(im, 0, 0, mw, mh); fg.restore();
-      gl3d(g, G => drawCard(G, fr, mw, mh, pose(t, b, { ry: -8, rx: 4, shadow: .6 })));
+      gl3d(g, G => drawCard(G, fr, mw, mh, pose(t, b, { shadow: .25 })));
     }
-    if (b.caption) SCENES.photo.caption?.(g, t, b);
+    caption(g, t, b);
   },
 
-  // the user's own screenshot on the stage, as a card in 3D
+  // the user's own screenshot on white, as a card
   async image(g, t, b) {
     const im = IMG[b.src]; if (!im) { stage(g, t, b); return; }
-    if (b.backdrop === 'presenter') { await drawPresenter(g, t, { blur: 26 * U, dim: .3, zoomMul: 1.1, noVignette: true }); } else stage(g, t, b);
-    const maxW = W * (V ? .88 : .72), maxH = H * (V ? .6 : (b.caption ? .64 : .74)), s = Math.min(maxW / im.width, maxH / im.height);
-    const w = im.width * s, h = im.height * s, fr = scratch('shot', w, h), fg = fr.getContext('2d');
+    stage(g, t, b);
+    const maxW = W * (V ? .88 : .72), maxH = H * (V ? .6 : (b.caption ? .64 : .74)), sc = Math.min(maxW / im.width, maxH / im.height);
+    const w = im.width * sc, h = im.height * sc, fr = scratch('shot', w, h), fg = fr.getContext('2d');
     fg.save(); fg.clearRect(0, 0, w, h); roundRect(fg, 0, 0, w, h, 18 * U); fg.clip(); fg.drawImage(im, 0, 0, w, h); fg.restore();
-    gl3d(g, G => drawCard(G, fr, w, h, pose(t, b, { y: H / 2 - (b.caption ? 40 * U : 0), ry: -6, rx: 4, shadow: .4 })));
-    if (b.caption) withReveal(g, prog(t, b.start + .35, .4), () => { const f = fitWrap(g, b.caption, W * .8, (V ? 46 : 42) * U, 700, SANS, 1); g.font = font(f.size, 700); g.fillStyle = b.backdrop === 'presenter' ? '#fff' : C.ink; g.textAlign = 'center'; g.textBaseline = 'middle'; txt(g, f.lines[0], W / 2, H / 2 + h / 2 + 30 * U); });
+    gl3d(g, G => drawCard(G, fr, w, h, pose(t, b, { y: H / 2 - (b.caption ? 40 * U : 0), shadow: .22 })));
+    if (b.caption) withReveal(g, prog(t, b.start + .35, .4), () => { const f = fitWrap(g, b.caption, W * .8, (V ? 46 : 42) * U, 700, SANS, 1); g.font = font(f.size, 700); g.fillStyle = C.ink; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; txt(g, f.lines[0], W / 2, midBase(g, H / 2 + h / 2 + 30 * U)); });
   },
 
-  // end screen: the last frame blurred, thanks + channel, two "watch next" slots (YouTube fills them), Subscribe
-  async endscreen(g, t, b) {
-    const tl = Math.min(t, SPEECH_END - .05);
-    await drawPresenter(g, tl, { blur: 30 * U, dim: .5, zoomMul: 1.15 + .05 * prog(t, b.start, b.end - b.start), noVignette: true });
-    g.save(); g.globalCompositeOperation = 'screen'; for (let i = 0; i < 5; i++) { const sz = (200 + 200 * hash(i * 5)) * U; g.globalAlpha = .16; g.drawImage(tintSprite(SPR.bokeh, PALETTES.dark[i % 4]), W * hash(i * 11 + 4) - sz / 2 + noise1(t * .2, i) * 60 * U, H * hash(i * 23 + 1) - sz / 2, sz, sz); } g.restore();
-    vignette(g, .4);
+  // end screen on white: thanks + channel, two "watch next" slots (YouTube fills them), Subscribe clicked by a cursor
+  endscreen(g, t, b) {
+    stage(g, t, b);
     const k = eOut(prog(t, b.start + .1, .6));
     withReveal(g, k, () => {
-      g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 24 * U;
-      const f = fitWrap(g, b.text || 'Thanks for watching', W * .8, (V ? 84 : 76) * U, 800, SANS, 2); g.font = font(f.size, 800);
-      f.lines.forEach((l, i) => txt(g, l, W / 2, H * (V ? .2 : .2) + i * f.size * 1.1));
-      if (b.channel) { g.font = font(36 * U, 700); g.fillStyle = 'rgba(255,255,255,.8)'; txt(g, b.channel, W / 2, H * .2 + f.lines.length * f.size * 1.1 + 10 * U); }
+      g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = C.ink;
+      const f = fitWrap(g, b.text || 'Thanks for watching', W * .8, (V ? 84 : 80) * U, 800, SANS, 2); g.font = font(f.size, 800);
+      f.lines.forEach((l, i) => txt(g, l, W / 2, midBase(g, H * .19 + i * f.size * 1.1)));
+      if (b.channel) { g.font = font(36 * U, 700); g.fillStyle = C.mute; txt(g, b.channel, W / 2, midBase(g, H * .19 + f.lines.length * f.size * 1.1 + 4 * U)); }
     }, 16 * U);
     if (b.slots !== false) {
-      const sw = V ? W * .78 : W * .3, sh = sw * 9 / 16, ys = V ? [H * .45, H * .66] : [H * .55, H * .55], xs = V ? [W / 2, W / 2] : [W * .3, W * .7];
-      [0, 1].forEach(i => { const sk = eOut(prog(t, b.start + .35 + i * .15, .5)); g.save(); g.globalAlpha = sk; g.translate(xs[i], ys[i] + (1 - sk) * 40 * U);
-        g.fillStyle = 'rgba(255,255,255,.08)'; g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 3 * U; roundRect(g, -sw / 2, -sh / 2, sw, sh, 20 * U); g.fill(); g.stroke();
-        g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.moveTo(-18 * U, -26 * U); g.lineTo(26 * U, 0); g.lineTo(-18 * U, 26 * U); g.closePath(); g.fill();
-        g.font = font(28 * U, 700); g.textAlign = 'center'; g.fillText(i ? 'Watch next' : 'Recommended', 0, sh / 2 + 36 * U); g.restore(); });
+      const sw = V ? W * .78 : W * .3, sh = sw * 9 / 16, ys = V ? [H * .45, H * .66] : [H * .53, H * .53], xs = V ? [W / 2, W / 2] : [W * .31, W * .69];
+      [0, 1].forEach(i => { const sk = eOut(prog(t, b.start + .35 + i * .15, .5)); g.save(); g.globalAlpha = sk; g.translate(xs[i], ys[i] + (1 - sk) * 30 * U);
+        shadow(g, 30 * U, 10 * U, .1); g.fillStyle = '#F3F3F1'; roundRect(g, -sw / 2, -sh / 2, sw, sh, 20 * U); g.fill(); noShadow(g);
+        g.strokeStyle = 'rgba(0,0,0,.08)'; g.lineWidth = 2 * U; roundRect(g, -sw / 2, -sh / 2, sw, sh, 20 * U); g.stroke();
+        g.fillStyle = '#B9B7B2'; g.beginPath(); g.moveTo(-18 * U, -26 * U); g.lineTo(28 * U, 0); g.lineTo(-18 * U, 26 * U); g.closePath(); g.fill();
+        g.fillStyle = C.ink2; g.font = font(28 * U, 700); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText(i ? 'Watch next' : 'Recommended', 0, sh / 2 + 44 * U); g.restore(); });
     }
-    OVER.subscribe(g, t, { ...b, start: b.start + .8, end: b.end + 1, y: V ? .85 : .86 });
+    OVER.subscribe(g, t, { ...b, start: b.start + .8, end: b.end + 1, y: V ? .85 : .86, dark: true });
   },
 };
-SCENES.quote.async = SCENES.photo.async = SCENES.video.async = SCENES.image.async = SCENES.endscreen.async = true;
+SCENES.search.async = SCENES.photo.async = SCENES.video.async = SCENES.image.async = true;
 
 // a mock of a post or a format for compare columns: abstract shapes, no real brand
 
-// the UI in L.ui, filmed off a monitor in a dark room: bezel, perspective, slow push, the far side out of focus
-function monitorShot(g, t, b) {
-  const ui = L.ui.getContext('2d');
-  ui.save(); ui.globalAlpha = .05; for (let y = 0; y < H; y += 3) { ui.fillStyle = '#000'; ui.fillRect(0, y, W, 1); } ui.restore();
-  const gl = ui.createLinearGradient(0, 0, W, H); gl.addColorStop(0, 'rgba(255,255,255,.18)'); gl.addColorStop(.35, 'rgba(255,255,255,0)'); gl.addColorStop(.7, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,.08)'); ui.fillStyle = gl; ui.fillRect(0, 0, W, H);
-  // a dark room, the monitor in it
-  g.fillStyle = '#121214'; g.fillRect(0, 0, W, H);
-  const room = g.createRadialGradient(W * .5, H * .45, 0, W * .5, H * .5, W * .8); room.addColorStop(0, 'rgba(90,110,140,.35)'); room.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = room; g.fillRect(0, 0, W, H);
-  g.save(); g.globalCompositeOperation = 'screen'; for (let i = 0; i < 6; i++) { const sz = (90 + 120 * hash(i * 7)) * U; g.globalAlpha = .18; g.drawImage(tintSprite(SPR.bokeh, ['#FFB060', '#6FA8FF', '#FF7090'][i % 3]), W * hash(i * 13 + 2) - sz / 2, H * (.1 + .8 * hash(i * 29)) - sz / 2, sz, sz); } g.restore();
-  const ki = eOut5(prog(t, b.start - .1, 1.1)), held = prog(t, b.start, b.end - b.start);
-  const ry = lerp(-26, b.tilt ?? -13, ki) + noise1(t * .35, 4) * 1.2, rx = lerp(12, 5, ki) + noise1(t * .3, 8) * .8, z = lerp(700, 260, ki) - eIO(held) * 300;
-  const sc = .9, mw = W * sc, mh = H * sc;
-  gl3d(g, G => {
-    const bez = scratch('bezel', 64, 64); { const bg = bez.getContext('2d'); bg.fillStyle = '#1b1c1f'; bg.fillRect(0, 0, 64, 64); }
-    G.plane(bez, { w: mw * 1.04, h: mh * 1.06, x: W / 2, y: H / 2, z: z + 8, ry, rx, static: true });
-    G.plane(L.ui, { w: mw, h: mh, x: W / 2, y: H / 2, z, ry, rx });
-  });
-  // screen glow onto the room, then depth of field: the far side of the screen goes soft
-  dof(g, b.tilt ?? -13 < 0 ? 'right' : 'left', 6 * U + (1 - ki) * 10 * U);
-  vignette(g, .4);
+// the UI in L.ui shown as an app window on the white stage: rounded corners, a hairline, a soft shadow, square to the
+// camera, a slow push. (No monitor bezel, no dark room: the editors read those as stock.)
+function browserChrome(ui) {
+  ui.fillStyle = '#F1F1F1'; ui.fillRect(0, 0, W, 64 * U); ui.fillStyle = '#E2E2E2'; ui.fillRect(0, 64 * U, W, 2 * U);
+  ['#FF5F57', '#FEBC2E', '#28C840'].forEach((cc, i) => { ui.fillStyle = cc; ui.beginPath(); ui.arc(36 * U + i * 30 * U, 32 * U, 9 * U, 0, Math.PI * 2); ui.fill(); });
+  ui.fillStyle = '#fff'; roundRect(ui, 160 * U, 14 * U, W * .45, 36 * U, 18 * U); ui.fill();
+}
+function windowShot(g, t, b) {
+  stage(g, t, b);
+  const sc = V ? .92 : .86, r = 26 * U, win = scratch('window', W, H), wg = clear(win);
+  wg.save(); roundRect(wg, 0, 0, W, H, r / sc); wg.clip(); blit(wg, L.ui, 0, 0); wg.restore();
+  wg.strokeStyle = 'rgba(0,0,0,.12)'; wg.lineWidth = 2 * U / sc; roundRect(wg, 1, 1, W - 2, H - 2, r / sc); wg.stroke();
+  gl3d(g, G => drawCard(G, win, W, H, pose(t, b, { s: sc, dolly: 60, shadow: .2 })));
 }
 
+// a caption plate for photos and clips: white, a soft shadow, the accent bar inside the plate
+function caption(g, t, b) {
+  if (!b.caption) return;
+  const k = eOut(prog(t, b.start + .3, .45)), ko = eIn(prog(t, b.end - .4, .4)); if (k <= 0) return;
+  g.save(); g.globalAlpha = k * (1 - ko); g.translate((1 - k) * -30 * U, 0); g.font = font(40 * U, 800);
+  const pad = 26 * U, bar = 7 * U, ph = 76 * U, cw = g.measureText(b.caption).width + pad * 3 + bar, cx = 70 * U, cy = H - 110 * U;
+  shadow(g, 30 * U, 10 * U, .22); g.fillStyle = '#FFFFFF'; roundRect(g, cx, cy - ph / 2, cw, ph, 18 * U); g.fill(); noShadow(g);
+  g.fillStyle = C.accent; roundRect(g, cx + pad, cy - ph * .28, bar, ph * .56, bar / 2); g.fill();
+  g.fillStyle = C.ink; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; txt(g, b.caption, cx + pad * 2 + bar, midBase(g, cy)); g.restore();
+}
 function mock(g, kind, x, y, w, h, col, t, k) {
   g.save(); g.fillStyle = '#F6F4F0'; roundRect(g, x, y, w, h, 18 * U); g.fill();
   const line = (lx, ly, lw, lh = 14 * U, c = '#D9D4CC') => { g.fillStyle = c; roundRect(g, lx, ly, lw, lh, lh / 2); g.fill(); };
@@ -587,29 +546,28 @@ function chartPoints(kind, n) {
     pts.push([x, clamp(y)]); }
   return pts;
 }
-// abstract thumbnails behind the search bar (no real people, no real brands)
+// thumbnails behind the search bar: stills of the presenter's own take (real footage, no stock, no real brands)
 let THUMBS = null;
-function thumbGrid(g) { if (!THUMBS) { THUMBS = layer(); drawThumbs(THUMBS.getContext('2d')); } g.drawImage(THUMBS, 0, 0); }
-function drawThumbs(g) {
-  const cols = V ? 2 : 4, tw = (V ? W * .44 : W * .23), th = tw * 9 / 16, gap = 28 * U, x0 = (W - (cols * tw + (cols - 1) * gap)) / 2;
-  for (let r = 0; r < 4; r++) for (let c = 0; c < cols; c++) {
-    const i = r * cols + c, x = x0 + c * (tw + gap), y = H * (V ? .5 : .45) + r * (th + 80 * U) - 40 * U;
-    const h1 = Math.floor(hash(i * 31 + 7) * 360), h2 = (h1 + 40 + Math.floor(hash(i * 17) * 80)) % 360;
-    const gr = g.createLinearGradient(x, y, x + tw, y + th); gr.addColorStop(0, `hsl(${h1},70%,60%)`); gr.addColorStop(1, `hsl(${h2},75%,42%)`);
-    g.save(); g.fillStyle = gr; roundRect(g, x, y, tw, th, 14 * U); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.88)'; g.font = font(th * .2, 800); g.textBaseline = 'top'; g.fillText(['IDEA', 'HOW TO', '10X', 'WHY?', 'NEW', 'TOP 5', 'DON\'T', '$1M'][i % 8], x + 18 * U, y + th * .55);
-    g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.arc(x + tw * .75, y + th * .52, th * .32, 0, Math.PI * 2); g.fill();
-    g.fillStyle = 'rgba(0,0,0,.7)'; roundRect(g, x + tw - 74 * U, y + th - 36 * U, 62 * U, 26 * U, 6 * U); g.fill();
-    g.fillStyle = '#c9c9c9'; roundRect(g, x, y + th + 16 * U, tw * .85, 16 * U, 8 * U); g.fill(); roundRect(g, x, y + th + 42 * U, tw * .5, 13 * U, 6 * U); g.fill();
-    g.restore();
-  }
+async function thumbGrid(g) {
+  if (!THUMBS) { THUMBS = layer(); await drawThumbs(THUMBS.getContext('2d')); }
+  g.drawImage(THUMBS, 0, 0);
 }
-// depth of field: one side of the frame goes soft (a blurred copy faded in by a gradient)
-function dof(g, side, px) {
-  if (px < .5) return;
-  const t2 = clear(L.fx); t2.filter = `blur(${px.toFixed(1)}px)`; t2.drawImage(g.canvas, 0, 0); t2.filter = 'none';
-  t2.globalCompositeOperation = 'destination-in';
-  const gr = t2.createLinearGradient(side === 'right' ? W * .35 : W * .65, 0, side === 'right' ? W : 0, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)');
-  t2.fillStyle = gr; t2.fillRect(0, 0, W, H);
-  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(L.fx, 0, 0); g.restore();
+async function drawThumbs(g) {
+  const cols = V ? 2 : 4, tw = (V ? W * .44 : W * .22), th = tw * 9 / 16, gap = 30 * U, x0 = (W - (cols * tw + (cols - 1) * gap)) / 2;
+  const titles = ['How I plan a video', 'My editing setup', '5 things I learned', 'Q&A: your questions', 'One year on YouTube', 'Behind the scenes', 'What I would change', 'Start here'];
+  for (let r = 0; r < 3; r++) for (let c = 0; c < cols; c++) {
+    const i = r * cols + c, x = x0 + c * (tw + gap), y = H * (V ? .5 : .45) + r * (th + 100 * U) - 40 * U;
+    const ft = INFO.duration * (.08 + .84 * hash(i * 31 + 7)), img = await frame(ft * FPS + 1), a = aimAt(ft);
+    // a tighter crop around the face, different for each thumbnail
+    const z = 1.15 + .35 * hash(i * 17), cw = img.width / z, chh = img.height / z, sx = clamp(a.x * img.width - cw / 2, 0, img.width - cw), sy = clamp(a.y * img.height - chh * .42, 0, img.height - chh);
+    g.save(); roundRect(g, x, y, tw, th, 14 * U); g.clip(); g.filter = 'contrast(1.08) saturate(1.12)'; g.drawImage(img, sx, sy, cw, chh, x, y, tw, th); g.filter = 'none';
+    const sh = g.createLinearGradient(0, y + th * .45, 0, y + th); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.45)'); g.fillStyle = sh; g.fillRect(x, y, tw, th);
+    g.font = font(th * .15, 800); g.textBaseline = 'alphabetic'; g.lineJoin = 'round'; g.lineWidth = th * .03; g.strokeStyle = 'rgba(0,0,0,.6)';
+    const word = titles[i % titles.length].split(' ').slice(0, 2).join(' ').toUpperCase(); g.strokeText(word, x + 16 * U, y + th - 20 * U); g.fillStyle = '#fff'; g.fillText(word, x + 16 * U, y + th - 20 * U);
+    g.restore();
+    g.fillStyle = 'rgba(0,0,0,.78)'; roundRect(g, x + tw - 70 * U, y + 10 * U, 60 * U, 26 * U, 6 * U); g.fill();
+    g.fillStyle = '#fff'; g.font = font(17 * U, 700); g.textAlign = 'center'; g.fillText(`${4 + Math.floor(hash(i) * 14)}:${String(Math.floor(hash(i * 3) * 60)).padStart(2, '0')}`, x + tw - 40 * U, y + 29 * U); g.textAlign = 'left';
+    g.fillStyle = '#1a1a1a'; g.font = font(22 * U, 700); g.fillText(titles[i % titles.length], x, y + th + 34 * U);
+    g.fillStyle = '#8a8a8a'; g.font = font(18 * U, 500); g.fillText(`${(1 + hash(i * 5) * 40).toFixed(0)}K views · ${1 + Math.floor(hash(i * 9) * 11)} months ago`, x, y + th + 62 * U);
+  }
 }

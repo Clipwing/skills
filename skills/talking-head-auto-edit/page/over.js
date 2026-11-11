@@ -1,124 +1,64 @@
 // talking-head-auto-edit engine, part 4: what draws over (or around) the presenter.
-//   words  : solid 3D words standing in the room; `behind` ones sit on the wall and the head passes in front of them
+//   words  : flat text beside the presenter. The camera moves the presenter to one side (a little closer) and a clean
+//            white panel with the words takes the other side; `style: "headline"` is one line across the lower third
 //   callout, subscribe : small labels
-//   split  : the presenter slides into a window on one side, a text panel takes the other side (a full-screen beat
-//            that animates itself in and out, so it needs no transition)
+//   split  : the presenter in a window on one side, a text panel on the other side (a full-screen beat that animates
+//            itself in and out, so it needs no transition)
 'use strict';
 
-// ------------------------------------------------------------------ 3D words
-// text -> canvas: one or two lines of heavy letters that rise in one after another; returns {c, w, h}
-function wordCanvas(key, lines, sub, size, col, t, at, out) {
-  const g0 = scratch('wm', 8, 8).getContext('2d'), lh = size * 1.02;
-  g0.font = font(size, 900, ROOM); const mw = Math.max(...lines.map(l => g0.measureText(l).width));
-  g0.font = font(size * .36, 800); const sw = sub ? g0.measureText(sub).width : 0;
-  const pad = size * .22, w = Math.max(mw, sw) + pad * 2, h = lh * lines.length + size * .2 + (sub ? size * .5 : 0) + pad * 2;
-  const c = scratch('word' + key, w, h), g = clear(c);
-  const n = lines.reduce((a, l) => a + l.length, 0), step = Math.min(.03, .45 / n);
-  let idx = 0;
-  lines.forEach((line, li) => {
-    g.font = font(size, 900, ROOM); g.textBaseline = 'alphabetic'; g.textAlign = 'left';
-    const base = pad + size * .9 + li * lh;
-    // lines line up on the side that faces the presenter (that end is anchored next to the head)
-    let x = pad + (key.endsWith('R') ? 0 : mw - g.measureText(line).width);
-    for (const ch of line) {
-      const k = eOut(prog(t, at + idx * step, .4)), ko = eIn(prog(t, out - .34 + (n - idx) * .01, .3)); idx++;
-      g.save(); g.globalAlpha = clamp(k * 2) * (1 - ko); g.translate(0, (1 - k) * size * .3 - ko * size * .18);
-      const lg = g.createLinearGradient(0, base - size * .8, 0, base); lg.addColorStop(0, col); lg.addColorStop(1, shade(col.startsWith('#') ? col : '#ffffff', -.1));
-      g.fillStyle = lg; txt(g, ch, x, base); g.restore();
-      x += g.measureText(ch).width;
-    }
-  });
-  if (sub) { const k = eOut(prog(t, at + .3, .4)); g.save(); g.globalAlpha = k * (1 - eIn(prog(t, out - .3, .3))); g.font = font(size * .36, 800); g.fillStyle = col; g.textAlign = key.endsWith('R') ? 'left' : 'right'; txt(g, sub, key.endsWith('R') ? pad + size * .04 : w - pad - size * .04, pad + size * .9 + (lines.length - 1) * lh + size * .52); g.restore(); }
-  return { c, w, h };
+// ------------------------------------------------------------------ words beside the presenter
+// the side the text takes (the presenter goes to the other one): b.side, else the first item's pos, else right
+function wordsSide(b) {
+  if (b._side) return b._side;
+  const p = b.side || (b.items || []).map(it => it.pos || '').find(p2 => /left|right/.test(p2)) || 'right';
+  return b._side = /left/.test(p) ? -1 : 1;
 }
-function blurred(key, src, px) {
-  const c = scratch('blur' + key, src.width, src.height), g = clear(c); g.filter = `blur(${px}px)`; g.drawImage(src, 0, 0); g.filter = 'none'; return c;
-}
-// the rule for words around the presenter: the face stays clear, the words stay readable. A word stands beside the
-// head (its inner end may tuck under the hair, never under the face), turned in perspective: the outer end is nearer
-// the camera, the inner end recedes towards the wall behind the presenter.
-const WORD_TURN = 26;    // degrees per side: the end next to the presenter comes towards the camera, the outer end recedes
-function sortWords(b) {
-  if (b._sides) return b._sides;
-  let last = 1;
-  return b._sides = (b.items || []).map(it => { const p = it.pos || ''; const s = /left/.test(p) ? -1 : /right/.test(p) ? 1 : -last; last = s; return s; });
-}
-function placeWord(b, i, it, at, leave) {
-  const side = sortWords(b)[i], depth = it.depth || b.depth || (INFO.matte ? 'behind' : 'front'), pos = it.pos || '';
-  const xa = presenterXf(at), m = 64 * U, gap = 30 * U;
-  // the head moves while the word stands (leans, turns): keep clear of everywhere it goes during the word's life
-  const ts = [0, .2, .4, .6, .8, 1].map(q => lerp(at, Math.max(at, leave - .1), q));
-  const room = ts.map(tt => { const x2 = presenterXf(tt), h = headBox(tt, x2), r = v => v / x2.s;
-    return { l: r(h.cx - h.w * .62 - x2.x), rr: r(h.cx + h.w * .62 - x2.x), top: r(h.top - x2.y), cy: r(h.cy - x2.y), h: r(h.h) }; });
-  const med = a => a.slice().sort((p, q) => p - q)[a.length >> 1], toX = v => xa.x + v * xa.s, toY = v => xa.y + v * xa.s;
-  const hb = { cy: toY(med(room.map(r => r.cy))), h: med(room.map(r => r.h)) * xa.s, top: toY(Math.min(...room.map(r => r.top))) };
-  const faceL = toX(Math.min(...room.map(r => r.l))), faceR = toX(Math.max(...room.map(r => r.rr))), faceT = hb.top - hb.h * .05, faceB = hb.cy + hb.h * .7;
-  const innerX = side < 0 ? faceL - gap : faceR + gap;
-  let y = /top/.test(pos) ? faceT + hb.h * .1 : /bottom/.test(pos) ? faceB + hb.h * .15 : hb.cy - hb.h * .12;
-  const [mainText, sub] = String(it.text).split('\n'), avail = side < 0 ? innerX - m : W - m - innerX;
-  // one line if it fits at a good size, else two balanced lines
-  const g0 = scratch('wm', 8, 8).getContext('2d'), fits = (lines, sz) => { g0.font = font(sz, 900, ROOM); return Math.max(...lines.map(l => g0.measureText(l).width)) * 1.08 <= avail; };
-  // one line or two balanced lines: whichever lets the word stand bigger (one line wins a close call)
-  const size0 = (it.size || 150) * U, sizeFor = ls => { let sz = size0; while (sz > 70 * U && !fits(ls, sz)) sz *= .96; return sz; };
-  const ws = mainText.split(' '), layouts = [[mainText]];
-  if (ws.length > 1) { let best = null; for (let k = 1; k < ws.length; k++) { const a = [ws.slice(0, k).join(' '), ws.slice(k).join(' ')]; g0.font = font(size0, 900, ROOM); const wmax = Math.max(...a.map(l => g0.measureText(l).width)); if (!best || wmax < best.w) best = { a, w: wmax }; } layouts.push(best.a); }
-  const sizes = layouts.map(sizeFor), pick = sizes.length > 1 && sizes[1] > sizes[0] * 1.15 ? 1 : 0;
-  const lines = layouts[pick], size = sizes[pick];
-  const key = b.i + '_' + i + (side < 0 ? 'L' : 'R');
-  const wc = wordCanvas(key, lines, sub, size, '#fff', at + 9, at, at + 99);
-  // fit in room units: check the resting pose at several moments of its life (the framing may change meanwhile)
-  const u = (innerX - xa.x) / xa.s; let v = (y - xa.y) / xa.s, fit = 1;
-  const pose = (tt, f, vv) => { const x2 = presenterXf(tt), k = x2.s / xa.s; return { w: wc.w, h: wc.h, ax: side < 0 ? 1 : 0, ay: .5, x: x2.x + u * x2.s, y: x2.y + vv * x2.s, z: depth === 'behind' ? 0 : -60, ry: side * WORD_TURN, rx: 3, s: k * f }; };
-  const rectOf = o => { const bd = GL.bounds(o); return [Math.min(...bd.map(p => p[0])), Math.min(...bd.map(p => p[1])), Math.max(...bd.map(p => p[0])), Math.max(...bd.map(p => p[1]))]; };
-  for (let pass = 0; pass < 8; pass++) {
-    let bad = false;
-    for (const tt of ts) {
-      const r = rectOf(pose(tt, fit, v));
-      if (r[0] < m || r[2] > W - m) { fit *= .93; bad = true; break; }
-      if (r[1] < m) { v += (m - r[1]) / presenterXf(tt).s + 4 * U; bad = true; break; }
-      if (r[3] > H - m) { v -= (r[3] - H + m) / presenterXf(tt).s + 4 * U; bad = true; break; }
-    }
-    if (!bad) break;
+// how far the camera has moved the presenter aside for a words beat at time t (0..1), and to which side
+function wordsFrame(t) {
+  if (V) return null;
+  for (const b of BEATS) {
+    if (b.type !== 'words' || b.style === 'headline' || t < b.start - .5 || t > b.end + .5) continue;
+    const k = eIO(prog(t, b.start - .35, .6)) * (1 - eIO(prog(t, b.end - .3, .6)));
+    if (k > 0) return { k, side: wordsSide(b) };
   }
-  // (no dependence on other words' placement: each render worker places words on its own, so it must be deterministic;
-  //  a word on the same side leaves as the next one arrives, so they never share the spot)
-  return { u, v, s: xa.s, fit, size, lines, sub, side, depth, key, rect: rectOf(pose(at, fit, v)) };
+  return null;
 }
+const wordText = it => String(it.text || '').replace(/\s*\n\s*/g, ' ').trim();
 
 const OVER = {
-  async words(g, t, b, xf) {
-    const items = b.items || [], behind = [], front = [];
-    b._pl ||= [];
+  words(g, t, b, xf) {
+    if (b.style === 'headline') return headline(g, t, b);
+    const items = b.items || [], side = wordsSide(b);
+    const env = eOut(prog(t, b.start - .1, .45)) * (1 - eIn(prog(t, b.end - .3, .3)));
+    if (env <= 0) return;
+    // the panel: on the free side in 16:9, low in 9:16. Sized once for all its lines, so it never resizes.
+    const pw = V ? W * .86 : W * .4, px = V ? (W - pw) / 2 : (side > 0 ? W * .545 : W * .055), pad = 54 * U;
+    const c = scratch('wordsPanel', W, H).getContext('2d');
+    const fits = items.map(it => fitWrap(c, wordText(it), pw - pad * 2 - 30 * U, (it.size || (items.length > 1 ? 76 : 96)) * U, 800, SANS, 2, 44 * U));
+    const gapY = 30 * U, lh = f => f.size * 1.1, blockH = fits.reduce((s2, f) => s2 + f.lines.length * lh(f), 0) + gapY * (fits.length - 1);
+    // the panel grows (eased) as each line arrives, so it never shows empty room for lines still to come
+    const atOf = (it, i) => (it.at ?? (b.start + i * .6)) - .12;
+    let shownH = -gapY; fits.forEach((f, i) => { const kk = eIO(prog(t, atOf(items[i], i) - .05, .35)); shownH += (f.lines.length * lh(f) + gapY) * (i === 0 ? 1 : kk); });
+    const ph = shownH + pad * 2, fullH = blockH + pad * 2, py = V ? H * .62 : H * .5 - fullH / 2 + 20 * U;
+    g.save(); g.globalAlpha = env; g.translate((1 - env) * side * 40 * U, 0);
+    const bl = (1 - env) * 10 * U; if (bl > .3) g.filter = `blur(${bl.toFixed(1)}px)`;
+    shadow(g, 40 * U, 14 * U, .16); g.fillStyle = 'rgba(255,255,255,.97)'; roundRect(g, px, py, pw, ph, 30 * U); g.fill(); noShadow(g);
+    let y = py + pad, lastOn = -1;
+    items.forEach((it, i) => { if (t >= (it.at ?? b.start + i * .6) - .12) lastOn = i; });
     items.forEach((it, i) => {
-      const at = it.at ?? (b.start + i * .6);
-      // a word stays until the next word on its side arrives (or the one two places later), at least 1.6 s
-      const sides = sortWords(b), nextSame = items.findIndex((x, j) => j > i && sides[j] === sides[i]);
-      const until = Math.min(...[nextSame, i + 2].filter(j => j > i && j < items.length).map(j => (items[j].at ?? (b.start + j * .6)) - .15), b.end);
-      const leave = Math.min(b.end, Math.max(at + 1.6, until));
-      if (t < at - .05 || t >= leave) return;
-      b._pl[i] ||= placeWord(b, i, it, at, leave);
-      const pl = b._pl[i], wc = wordCanvas(pl.key, pl.lines, pl.sub, pl.size, it.color || '#FFFFFF', t, at, leave);
-      const ki = eOut5(prog(t, at, .8)), ko = eIn(prog(t, leave - .4, .4)), k = xf.s / pl.s;
-      const turn = pl.side * WORD_TURN;
-      (pl.depth === 'behind' ? behind : front).push({ wc, key: pl.key, o: {
-        w: wc.w, h: wc.h, ax: pl.side < 0 ? 1 : 0, ay: .5, x: xf.x + pl.u * xf.s, y: xf.y + pl.v * xf.s,
-        z: (pl.depth === 'behind' ? 0 : -60) + ko * 60,
-        ry: turn * (1 + (1 - ki) * .8 + ko * .6), rx: 3 + (1 - ki) * 8, rz: 0,
-        s: k * pl.fit * (.9 + .1 * ki), alpha: clamp(ki * 2.5) * (1 - ko) } });
+      const f = fits[i], at = (it.at ?? (b.start + i * .6)) - .12, k = eOut(prog(t, at, .4)), cur = i === lastOn, h = f.lines.length * lh(f);
+      if (k > 0) {
+        g.save(); g.globalAlpha *= clamp(k * 1.6) * (cur || items.length === 1 ? 1 : .42);
+        const b2 = (1 - k) * 10 * U; if (b2 > .3) g.filter = `blur(${b2.toFixed(1)}px)`; g.translate(0, (1 - k) * 18 * U);
+        if (cur) { g.fillStyle = it.color && it.color !== '#FFFFFF' && it.color !== '#fff' ? it.color : C.accent; roundRect(g, px + pad, y + f.size * .08, 8 * U, h - f.size * .2, 4 * U); g.fill(); }
+        g.font = font(f.size, 800); g.fillStyle = C.ink; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+        f.lines.forEach((l, li) => txt(g, l, px + pad + 30 * U, y + li * lh(f) + f.size * .82));
+        g.restore();
+      }
+      y += h + gapY;
     });
-    const draw = list => gl3d(g, G => list.forEach(({ wc, o, key }) => {
-      // the word stands off the wall: a soft shadow cast on the wall behind it (light from the front, up and to the
-      // presenter's side, so it falls down and outwards), plus a tighter contact shadow
-      const side = o.ax > .5 ? -1 : 1, soft = blurred(key + 's', wc.c, 22 * U), hard = blurred(key, wc.c, 7 * U);
-      G.plane(soft, { ...o, x: o.x + side * 80 * U * o.s, y: o.y + 70 * U * o.s, z: o.z + 120, ry: o.ry * .5, rx: 0, s: o.s * 1.02, tint: [.12, .1, .14, 1], alpha: o.alpha * .5 });
-      G.plane(hard, { ...o, x: o.x + side * 12 * U * o.s, y: o.y + 18 * U * o.s, z: o.z + 70, tint: [.08, .07, .1, 1], alpha: o.alpha * .3 });
-      G.extrude(wc.c, o, 60, 20, [.36, .36, .42], side * 3 * U * o.s, 6 * U * o.s);
-      G.plane(wc.c, o);
-    }));
-    if (behind.length) { draw(behind); if (await presenterCutout(t, xf)) blit(g, L.cut, 0, 0); }
-    if (front.length) draw(front);
+    g.restore();
   },
-
   // a short label with a hand-drawn arrow towards the presenter
   callout(g, t, b, xf) {
     const k = eOut(prog(t, b.start, .4)), ko = eIn(prog(t, b.end - .3, .3)); if (k <= 0) return;
@@ -155,39 +95,70 @@ const OVER = {
   },
 };
 
+// ------------------------------------------------------------------ headline: one line across the lower third
+// the sentence lands word by word on the voice; `mark` words get a marker; the presenter stays as framed
+function headline(g, t, b) {
+  const text = b.text || (b.items || []).map(wordText).join(' '), words = text.split(/\s+/).filter(Boolean);
+  const env = eOut(prog(t, b.start - .1, .4)) * (1 - eIn(prog(t, b.end - .3, .3))); if (env <= 0) return;
+  const spoken = spokenTimes(text, b.start - .3, b.end), marks = String(b.mark || '').toLowerCase().split(/\s+/).filter(Boolean);
+  const maxW = W * (V ? .86 : .84), f = fitWrap(g, text, maxW, (b.size || (V ? 80 : 88)) * U, 800, SANS, V ? 3 : 1, 40 * U);
+  g.font = font(f.size, 800); const sp = g.measureText(' ').width, padX = 46 * U, lh = f.size * 1.18;
+  const bw = Math.max(...f.lines.map(l => g.measureText(l).width)) + padX * 2, bh = f.lines.length * lh + 40 * U;
+  const bx = (W - bw) / 2, by = H * (V ? .66 : .79) - bh / 2;
+  g.save(); g.globalAlpha = env; g.translate(0, (1 - env) * 30 * U);
+  shadow(g, 40 * U, 14 * U, .18); g.fillStyle = 'rgba(255,255,255,.97)'; roundRect(g, bx, by, bw * lerp(.85, 1, env) + bw * 0, bh, 26 * U); g.fill(); noShadow(g);
+  let wi = 0, last = b.start;
+  f.lines.forEach((ln, li) => {
+    let x = W / 2 - g.measureText(ln).width / 2; const yc = by + 20 * U + lh * (li + .5);
+    for (const w of ln.split(' ')) {
+      const at = Math.max(b.start, (spoken[wi] ?? last + .12) - .06); last = at;
+      const k = eOut(prog(t, at, .3)), ww = g.measureText(w).width, isMark = marks.includes(w.toLowerCase().replace(/[^a-z0-9'-]/g, ''));
+      if (isMark && k > 0) { const mk = eIO(prog(t, at + .15, .35)); g.save(); g.globalCompositeOperation = 'multiply'; g.fillStyle = C.yellow; roundRect(g, x - 8 * U, yc - f.size * .52, (ww + 16 * U) * mk, f.size * 1.04, 10 * U); g.fill(); g.restore(); }
+      g.save(); g.globalAlpha *= clamp(k * 1.6); g.translate(0, (1 - k) * 16 * U); g.fillStyle = C.ink; g.textAlign = 'left'; g.textBaseline = 'alphabetic'; txt(g, w, x, midBase(g, yc)); g.restore();
+      x += ww + sp; wi++;
+    }
+  });
+  g.restore();
+}
+
 // ------------------------------------------------------------------ split: presenter on one side, a panel on the other
 SCENES.split = async function (g, t, b) {
   const right = (b.side || 'left') === 'right';                      // which side the presenter goes to
-  const kin = eIO(prog(t, b.start, .75)), kout = eIO(prog(t, b.end - .7, .7)), k = kin * (1 - kout);
-  stage(g, t, b, { palette: b.palette || 'warm' });
-  // the panel text
+  // coming from the presenter (in: self) the full frame eases into the window; coming from a card (a transition) the
+  // window is already in place, so no shape changes under the transition
+  const kin = b.in === 'self' ? eIO(prog(t, b.start, .8)) : 1, kout = b.out === 'self' ? eIO(prog(t, b.end - .8, .8)) : 0, k = kin * (1 - kout);
+  stage(g, t, b);
+  // the panel text: the kicker first, the title a few frames later, then the points on their words
   const pw = V ? W * .86 : W * .44, px = V ? W * .07 : (right ? W * .05 : W * .51), c = clear(L.card);
   let y = V ? H * .58 : H * .2;
-  const reveal = (d, fn) => { const kk = prog(t, b.start + .45 + d, .45) * (1 - prog(t, b.end - .75, .35)); if (kk > 0) withReveal(c, kk, fn, 10 * U); };
-  if (b.kicker) { reveal(0, () => chip(c, px, y, b.kicker.toUpperCase(), b.color || C.accent)); y += 70 * U; }
+  const textOut = b.out === 'self' ? prog(t, b.end - .8, .35) : 0;
+  const reveal = (at, fn) => { const kk = prog(t, at, .45) * (1 - textOut); if (kk > 0) withReveal(c, kk, fn, 10 * U); };
+  const t0 = b.in === 'self' ? b.start + .45 : b.start + .1;
+  if (b.kicker) { reveal(t0, () => chip(c, px, y, b.kicker.toUpperCase(), b.color || C.accent)); y += 70 * U; }
   const tf = fitWrap(c, b.title || '', pw, (V ? 88 : 84) * U, 800, SANS, 3);
-  reveal(.08, () => { c.font = font(tf.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'top'; tf.lines.forEach((l, i) => txt(c, l, px, y + i * tf.size * 1.08)); });
+  reveal(t0 + .14, () => { c.font = font(tf.size, 800); c.fillStyle = C.ink; c.textAlign = 'left'; c.textBaseline = 'top'; tf.lines.forEach((l, i) => txt(c, l, px, y + i * tf.size * 1.08)); });
   y += tf.lines.length * tf.size * 1.08 + 40 * U;
   if (b.value !== undefined) {
-    const v = Number(b.value) || 0, kc = eOut(prog(t, b.start + .6, 1.2)), s = (b.prefix || '') + fmtNum(v * kc, b.decimals || 0) + (b.suffix || '');
-    reveal(.15, () => { const ns = fitFont(c, (b.prefix || '') + fmtNum(v, b.decimals || 0) + (b.suffix || ''), pw, 150 * U, 800); c.font = font(ns, 800); c.fillStyle = b.color || C.accent; c.textAlign = 'left'; c.textBaseline = 'top'; txt(c, s, px, y); y += ns * 1.1; });
+    const v = Number(b.value) || 0, kc = eOut(prog(t, t0 + .2, 1.2)), sv = (b.prefix || '') + fmtNum(v * kc, b.decimals || 0) + (b.suffix || '');
+    reveal(t0 + .2, () => { const ns = fitFont(c, (b.prefix || '') + fmtNum(v, b.decimals || 0) + (b.suffix || ''), pw, 150 * U, 800); c.font = font(ns, 800); c.fillStyle = b.color || C.accent; c.textAlign = 'left'; c.textBaseline = 'top'; txt(c, sv, px, y); });
     y += 170 * U;
   }
   (b.items || []).forEach((it, i) => {
-    const at = it.at ?? (b.start + .9 + i * .6), kk = prog(t, at, .4) * (1 - prog(t, b.end - .75, .35)); if (kk <= 0) { y += 0; }
+    const at = Math.max(t0 + .25, (it.at ?? (b.start + .9 + i * .6)) - .1), kk = prog(t, at, .4) * (1 - textOut);
     const f = fitWrap(c, it.text, pw - 70 * U, (V ? 46 : 42) * U, 700, SANS, 2), yy = y;
-    if (kk > 0) withReveal(c, kk, () => { c.fillStyle = b.color || C.accent; c.beginPath(); c.arc(px + 14 * U, yy + f.size * .55, 10 * U, 0, Math.PI * 2); c.fill();
-      c.font = font(f.size, 700); c.fillStyle = C.ink2; c.textAlign = 'left'; c.textBaseline = 'top'; f.lines.forEach((l, li) => txt(c, l, px + 50 * U, yy + li * f.size * 1.15)); }, 8 * U);
+    if (kk > 0) withReveal(c, kk, () => { c.font = font(f.size, 700); c.fillStyle = b.color || C.accent; c.beginPath(); c.arc(px + 14 * U, yy + f.size * .55, 10 * U, 0, Math.PI * 2); c.fill();
+      c.fillStyle = C.ink2; c.textAlign = 'left'; c.textBaseline = 'top'; f.lines.forEach((l, li) => txt(c, l, px + 50 * U, yy + li * f.size * 1.15)); }, 8 * U);
     y += f.lines.length * f.size * 1.15 + 30 * U;
   });
-  gl3d(g, G => G.plane(L.card, { w: W, h: H, ry: (1 - k) * (right ? 12 : -12), z: (1 - k) * 200, alpha: clamp(k * 2) }));
-  // the presenter: from the full frame into a rounded window, cropped around the face
+  blit(g, L.card, 0, 0);
+  // the presenter: from the full frame into a rounded window, cropped around the face. Clean edge: a white mat under
+  // the picture carries the shadow, nothing dark can show at the rounded corners.
   const xf = presenterXf(t), pg = clear(L.tmp); await drawPresenter(pg, t, { xf, noVignette: true });
   const ww = V ? W * .86 : W * .42, wh = V ? H * .44 : H * .84, wx = V ? W * .07 : (right ? W * .54 : W * .04), wy = V ? H * .06 : H * .08;
   const hb = headBox(t, xf), srcW = H * ww / wh, sx = clamp(hb.cx - srcW / 2, 0, W - srcW);
   const r0 = [0, 0, W, H], r1 = [sx, 0, srcW, H], d1 = [wx, wy, ww, wh];
-  const sr = r0.map((v, i) => lerp(v, r1[i], k)), dr = r0.map((v, i) => lerp(v, d1[i], k)), rad = 34 * U * k;
-  g.save(); shadow(g, 60 * U * k, 24 * U * k, .3 * k); g.fillStyle = '#000'; roundRect(g, dr[0], dr[1], dr[2], dr[3], rad); g.fill(); noShadow(g);
+  const sr = r0.map((v, i) => lerp(v, r1[i], k)), dr = r0.map((v, i) => lerp(v, d1[i], k)), rad = 30 * U * k;
+  g.save(); if (k > .02) { shadow(g, 50 * U * k, 16 * U * k, .18 * k); g.fillStyle = '#FFFFFF'; roundRect(g, dr[0], dr[1], dr[2], dr[3], rad); g.fill(); noShadow(g); }
   roundRect(g, dr[0], dr[1], dr[2], dr[3], rad); g.clip(); g.drawImage(L.tmp, sr[0], sr[1], sr[2], sr[3], dr[0], dr[1], dr[2], dr[3]); g.restore();
 };
 SCENES.split.async = true;

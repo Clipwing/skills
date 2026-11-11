@@ -1,14 +1,17 @@
 // talking-head-auto-edit engine, part 5: the timeline. Edit rules are enforced here, whatever the plan says:
-//   - the presenter is never on screen for a flash between two full-screen beats (a gap < MIN_SHOT is closed: the
+//   - the presenter is never on screen for a moment between two full-screen beats (a gap < GAP_CLOSE is closed: the
 //     first beat runs on and the two hand over card to card);
-//   - every change between the presenter and a full-screen beat is a transition, never a hard cut;
+//   - every change between the presenter and a full-screen beat is a transition, never a hard cut. Transitions keep
+//     the whole frame (no shrunken or cropped screens, no dark gaps): a soft blur dissolve or a push-in zoom;
 //   - framing cuts that would land right next to a beat are dropped;
 //   - after the last word the presenter holds a beat, then the end screen runs.
 // The renderer (scripts/render.mjs) waits for window.__ready, then calls `await window.seek(t)` for every frame.
 'use strict';
 
-const MIN_SHOT = 1.6;                                  // shortest time the presenter may be on screen between beats
-const TR = { cut: 0, whip: .36, zoom: .4, leak: .7, flash: .3, fade: .45, slide: .5, push3d: .6, self: 0 };
+const MIN_SHOT = 1.6;                                  // shortest time the presenter may be on screen before the end screen
+const GAP_CLOSE = 3.4;                                 // a presenter shot shorter than this between two beats is cut out
+const TR = { cut: 0, blur: .5, zoom: .45, leak: .7, flash: .3, fade: .45, self: 0 };
+const TR_ALIAS = { whip: 'blur', slide: 'blur', push3d: 'blur' };   // older plans: the editors read these as cheap
 const SELF = new Set(['split']);
 let BEATS = [], FULL;
 
@@ -18,15 +21,28 @@ function buildBeats() {
   const full = beats.filter(b => FULL.has(b.type));
   // the last thing a card says must stay readable: at least READ s after it lands (+ a little per character)
   const READ = 1.6;
+  full.forEach(b => { if (TR_ALIAS[b.in]) b.in = TR_ALIAS[b.in]; if (TR_ALIAS[b.out]) b.out = TR_ALIAS[b.out]; });
   full.forEach((b, i) => {
+    // a title stays until it has been typed and read; a quote until its last word has been said and read
+    let need = 0;
+    if (b.type === 'title') need = b.start + .14 + String(b.text || '').length / (b.cps || 30) + READ;
+    if (b.type === 'quote') { const sp = spokenTimes(b.text || '', b.start - .3, b.end + 2).filter(x => x != null); need = (sp.length ? sp[sp.length - 1] : b.start + 1) + READ; }
+    if (need && b.end < need) {
+      // the next card may start later when its first point comes later anyway
+      const next = full[i + 1], first = next ? firstAt(next) : null;
+      if (next && next.start < need && first != null) next.start = Math.max(next.start, Math.min(need, first - .5));
+      b.end = next ? Math.min(need, next.start) : need;
+    }
     const its = [...(b.items || []), ...(b.steps || []), ...(b.bars || []), ...(b.parts || []), ...(b.rows || []), ...(b.nodes || []), ...(b.left?.items || []), ...(b.right?.items || [])].filter(x => x.at != null);
     if (!its.length) return;
     const last = its.reduce((a, x) => x.at > a.at ? x : a), len = String(last.text || (last.cells || []).join(' ') || last.label || '').length;
-    const need = last.at + READ + Math.min(1.2, len * .03), next = full[i + 1];
-    if (b.end < need) b.end = next ? Math.min(need, next.start) : need;
+    const need2 = last.at + READ + Math.min(1.2, len * .03), next = full[i + 1];
+    if (b.end < need2) b.end = next ? Math.min(need2, next.start) : need2;
   });
   // close short gaps and overlaps between full-screen beats
-  for (let i = 0; i + 1 < full.length; i++) { const a = full[i], n = full[i + 1]; if (n.start - a.end < MIN_SHOT) a.end = n.start; }
+  // (a gap that holds words beside the presenter is meant to be on the presenter: it stays)
+  const holdsWords = (a, n) => beats.some(w => !FULL.has(w.type) && w.type === 'words' && w.end > a.end + .3 && w.start < n.start - .3);
+  for (let i = 0; i + 1 < full.length; i++) { const a = full[i], n = full[i + 1]; if (n.start - a.end < (holdsWords(a, n) ? MIN_SHOT : GAP_CLOSE)) a.end = n.start; }
   if (full[0] && full[0].start < 1) full[0].start = 0;
   // the end screen
   if (PLAN.endscreen !== false && !full.some(b => b.type === 'endscreen')) {
@@ -42,11 +58,11 @@ function buildBeats() {
     const prev = full[i - 1], next = full[i + 1];
     const touchPrev = prev && Math.abs(prev.end - b.start) < .05, touchNext = next && Math.abs(next.start - b.end) < .05;
     b._full = true;
-    if (SELF.has(b.type)) { b.in = touchPrev ? (b.in && b.in !== 'self' ? b.in : 'push3d') : 'self'; b.out = touchNext ? 'cut' : 'self'; return; }
-    if (touchPrev) b.in = b.in && b.in !== 'cut' ? b.in : cyc(['push3d', 'slide', 'whip'], i);
-    else b.in = b.in && b.in !== 'cut' ? b.in : (b.type === 'endscreen' ? 'leak' : cyc(['whip', 'zoom', 'push3d', 'whip', 'slide'], i));
+    if (SELF.has(b.type)) { b.in = touchPrev ? (b.in && b.in !== 'self' ? b.in : 'blur') : 'self'; b.out = touchNext ? 'cut' : 'self'; return; }
+    if (touchPrev) b.in = b.in && b.in !== 'cut' ? b.in : 'blur';                       // card to card: a soft hand-over
+    else b.in = b.in && b.in !== 'cut' ? b.in : (b.type === 'endscreen' ? 'blur' : cyc(['blur', 'zoom'], i));
     if (touchNext) b.out = 'cut';                                         // the next beat's entrance takes over
-    else b.out = b.out && b.out !== 'cut' ? b.out : cyc(['zoom', 'slide', 'whip'], i);
+    else b.out = b.out && b.out !== 'cut' ? b.out : cyc(['blur', 'zoom'], i + 1);
   });
   // overlays never run under a full-screen beat
   beats = beats.filter(b => {
@@ -57,6 +73,10 @@ function buildBeats() {
   BEATS = beats.sort((a, b) => a.start - b.start);
   // framing cuts right before / after a beat read as a stutter
   TALK = TALK.filter((k, i) => i === 0 || !full.some(f => (k.t > f.end - .05 && k.t - f.end < 1.2) || (k.t < f.start && f.start - k.t < 1.2) || (k.t >= f.start && k.t < f.end)));
+}
+function firstAt(b) {
+  const its = [...(b.items || []), ...(b.steps || []), ...(b.bars || []), ...(b.parts || []), ...(b.rows || []), ...(b.nodes || []), ...(b.left?.items || []), ...(b.right?.items || [])].map(x => x && x.at).filter(x => x != null);
+  return its.length ? Math.min(...its) : null;
 }
 function fullAt(t) { return BEATS.filter(b => b._full && t >= b.start - (TR[b.in] || 0) / 2 && t < b.end + (TR[b.out] || 0) / 2); }
 
@@ -76,10 +96,12 @@ async function transition(kind, k, t, A, B) {
   const a = clear(L.a), b = clear(L.b);
   await drawState(a, t, A); await drawState(b, t, B);
   const out = ctx; out.save();
-  if (kind === 'whip') {
-    const p = eIO(k), off = p * W, tmp = clear(L.tmp);
-    tmp.drawImage(L.a, -off, 0); tmp.drawImage(L.b, W - off, 0);
-    hblur(out, L.tmp, Math.sin(Math.PI * k));
+  if (kind === 'blur') {
+    // A goes soft and drifts a little closer, B comes out of the same softness and settles; they cross in the middle
+    out.fillStyle = C.paper; out.fillRect(0, 0, W, H);
+    const bl = Math.sin(Math.PI * k) * 24 * U, mix = eIO(clamp((k - .3) / .4));
+    const draw = (src, s2, alpha) => { if (alpha <= 0) return; out.save(); out.globalAlpha = alpha; out.translate(W / 2, H / 2); out.scale(s2, s2); out.translate(-W / 2, -H / 2); if (bl > .3) out.filter = `blur(${bl.toFixed(1)}px)`; out.drawImage(src, 0, 0); out.restore(); };
+    draw(L.a, 1 + .04 * eIO(k), 1); draw(L.b, 1.04 - .04 * eIO(k), mix);
   } else if (kind === 'zoom') {
     if (k < .5) { const kk = eIn(k * 2); zoomBlur(out, L.a, 1 + kk * .5, .12 * kk); }
     else { const kk = eOut((k - .5) * 2); zoomBlur(out, L.b, 1.35 - .35 * kk, .1 * (1 - kk)); }
@@ -87,20 +109,6 @@ async function transition(kind, k, t, A, B) {
     out.drawImage(L.a, 0, 0); out.globalAlpha = eIO(k); out.drawImage(L.b, 0, 0); out.globalAlpha = 1; lightLeak(out, k);
   } else if (kind === 'flash') {
     out.drawImage(k < .5 ? L.a : L.b, 0, 0); flash(out, Math.sin(Math.PI * k) * .95);
-  } else if (kind === 'slide') {
-    // B rises over A like a new sheet; A sinks back and darkens
-    const p = eIO(k), sp = Math.sin(Math.PI * k);
-    out.fillStyle = '#0c0c0e'; out.fillRect(0, 0, W, H);
-    out.save(); const s = 1 - .08 * p; out.translate(W / 2, H / 2); out.scale(s, s); out.translate(-W / 2, -H / 2); out.filter = `brightness(${1 - .5 * p}) blur(${(sp * 4 * U).toFixed(1)}px)`; out.drawImage(L.a, 0, 0); out.restore();
-    out.save(); shadow(out, 60 * U, -10 * U, .45 * sp); out.filter = sp > .1 ? `blur(${(sp * 7 * U).toFixed(1)}px)` : 'none'; out.drawImage(L.b, 0, (1 - p) * H); out.restore();
-  } else if (kind === 'push3d') {
-    // A swings away into depth, B swings in from the other side
-    out.fillStyle = '#0c0c0e'; out.fillRect(0, 0, W, H);
-    const pa = eIn(clamp(k / .6)), pb = eOut(clamp((k - .4) / .6));
-    gl3d(out, G => {
-      if (pa < 1) G.plane(L.a, { w: W, h: H, ry: -38 * pa, z: 900 * pa, x: W / 2 - 300 * U * pa, alpha: 1 - pa * .9 });
-      if (pb > 0) G.plane(L.b, { w: W, h: H, ry: 38 * (1 - pb), z: 900 * (1 - pb), x: W / 2 + 300 * U * (1 - pb), alpha: .1 + pb * .9 });
-    });
   } else { out.drawImage(L.a, 0, 0); out.globalAlpha = eIO(k); out.drawImage(L.b, 0, 0); }
   out.restore();
 }
@@ -183,7 +191,7 @@ async function seek(t) {
   if (!drawn) { const b = active.find(x => t >= x.start && t < x.end) || null; await drawState(ctx, t, b); }
   for (const a of PLAN.accents || []) { if (t >= a.t && t < a.t + (a.d || .6)) { const k = (t - a.t) / (a.d || .6); if (a.type === 'leak') lightLeak(ctx, k); if (a.type === 'flash') flash(ctx, Math.sin(Math.PI * k) * .9); } }
   if (PLAN.captions?.enabled ?? V) { const cur = active.find(x => t >= x.start && t < x.end); captions(ctx, t, cur && !['photo', 'video', 'image'].includes(cur.type)); }
-  grain(ctx, t, PLAN.vfx?.grain ?? .06);
+  grain(ctx, t, PLAN.vfx?.grain ?? .03);
   if (CHECK) {   // text that leaves the frame (or sits within 12 px of its edge) while it is readable
     const m = 12 * U; window.BAD = inTransition ? [] : (ctx.canvas.__boxes || []).filter(b => b.a > .35).filter(b => b.pts.some(([x, y]) => x < m || x > W - m || y < m || y > H - m)).map(b => { const xs = b.pts.map(p => p[0]), ys = b.pts.map(p => p[1]); return [b.s, [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)].map(v => Math.round(v)).join(',')]; });
   }
@@ -195,11 +203,11 @@ function buildCues() {
   for (const b of BEATS) {
     const din = TR[b.in] || 0;
     if (b._full) {
-      if (['whip', 'zoom', 'push3d', 'slide'].includes(b.in)) add(b.start - din / 2, 'whoosh', { len: din + .15 });
+      if (['blur', 'zoom'].includes(b.in)) add(b.start - din / 2, 'whoosh', { len: din + .15 });
       if (b.in === 'leak') add(b.start - .3, 'whoosh', { len: .8, g: .6 });
       if (b.in === 'flash') add(b.start, 'hit', { g: .6 });
       if (b.in === 'self') add(b.start, 'whoosh', { len: .7, g: .6 });
-      if (['whip', 'zoom', 'slide'].includes(b.out)) add(b.end - TR[b.out] / 2, 'whoosh', { len: TR[b.out] + .15, g: .8 });
+      if (['blur', 'zoom'].includes(b.out)) add(b.end - TR[b.out] / 2, 'whoosh', { len: TR[b.out] + .15, g: .8 });
       if (b.out === 'self') add(b.end - .7, 'whoosh', { len: .7, g: .55 });
     }
     const at = (x, i, d, s = .6) => x?.at ?? (b.start + d + i * s);
@@ -236,7 +244,6 @@ async function loadBrand() {
   const face = async (fam, file, weights) => { for (const w of weights) { const f = new FontFace(fam, `url(/assets/${base}${file})`, { weight: String(w) }); await f.load(); document.fonts.add(f); } };
   if (br.fonts?.head) { await face('BrandHead', br.fonts.head, [800]); HEAD = 'BrandHead, ' + HEAD; }
   if (br.fonts?.body) { await face('BrandBody', br.fonts.body, [500, 600, 700]); SANS = 'BrandBody, ' + SANS; }
-  if (br.fonts?.words) { await face('BrandWords', br.fonts.words, [900]); ROOM = 'BrandWords, ' + ROOM; }
   if (br.fonts?.serif) { await face('BrandSerif', br.fonts.serif, [700]); SERIF = 'BrandSerif, ' + SERIF; }
   if (br.logo) BRAND.logo = await loadImage(`/assets/${base}${br.logo}`);
 }
@@ -253,7 +260,7 @@ async function loadBrand() {
       for (const s of [b.src, ...(b.srcs || [])]) if (s && ['image', 'photo'].includes(b.type) && !IMG[s]) IMG[s] = await loadImage('/assets/' + s);
       if (b.type === 'video' && b.src && !SEQ[b.src]) SEQ[b.src] = await loadJSON(`/assets/${b.src}/seq.json`, null);
     }
-    for (const [w, fam] of [[800, SANS], [700, SANS], [600, SANS], [500, SANS], [700, SERIF], [900, ROOM]]) await document.fonts.load(font(40, w, fam));
+    for (const [w, fam] of [[800, SANS], [700, SANS], [600, SANS], [500, SANS], [700, SERIF]]) await document.fonts.load(font(40, w, fam));
     makeSprites(); buildTalk(); buildBeats(); buildCaptions();
     window.DURATION = DUR; window.FPS = FPS; window.CUES = buildCues(); window.seek = seek; window.ASPECT = ASPECT;
     window.TIMELINE = { duration: DUR, fps: FPS, beats: BEATS.map(b => ({ i: b.i, type: b.type, start: b.start, end: b.end, in: b.in, out: b.out, full: !!b._full })), talk: TALK };

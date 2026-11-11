@@ -40,12 +40,15 @@ function aimAt(t) {
 // where the take lands on screen at time t: {x, y, s, rot, sw, sh} (s = pixels of screen per pixel of take)
 function presenterXf(t, opt = {}) {
   const sw = INFO.width, sh = INFO.height, cam = talkAt(t);
-  const zoom = cam.zoom * (opt.zoomMul || 1);
+  let zoom = cam.zoom * (opt.zoomMul || 1), anchorX = opt.anchorX ?? .5;
+  // a words beat: the camera eases the presenter to one side, a little closer, and gives the text the other side
+  const wf = opt.anchorX == null && typeof wordsFrame === 'function' ? wordsFrame(t) : null;
+  if (wf) { zoom = lerp(zoom, Math.min(ZMAX, Math.max(zoom, 1.22)), wf.k); anchorX = lerp(.5, wf.side > 0 ? .3 : .7, wf.k); }
   const s0 = Math.max(W / sw, H / sh), s = s0 * zoom;
   const aim = aimAt(t);
   const fx = (cam.fx ?? aim.x) * sw, fy = (cam.fy ?? aim.y) * sh;
   // the face goes to an anchor (centre, a little above the middle); at zoom 1 there is no room, so it stays put
-  const ax = W * (opt.anchorX ?? .5), ay = H * (V ? .36 : .4);
+  const ax = W * anchorX, ay = H * (V ? .36 : .4);
   let x = ax - fx * s, y = ay - fy * s;
   const amp = (PLAN.vfx?.handheld ?? 1) * U * (opt.handheld ?? 1);
   x += noise1(t * .5, 11) * 5 * amp; y += noise1(t * .45, 23) * 4 * amp;
@@ -63,7 +66,7 @@ async function drawPresenter(g, t, opt = {}) {
   const pad = opt.blur ? opt.blur * 2 : 0;
   g.drawImage(img, xf.x - pad, xf.y - pad, xf.dw + pad * 2, xf.dh + pad * 2);
   g.restore();
-  if (!opt.noVignette && (PLAN.vfx?.vignette ?? true)) vignette(g, .26);
+  if (!opt.noVignette && PLAN.vfx?.vignette) vignette(g, typeof PLAN.vfx.vignette === 'number' ? PLAN.vfx.vignette : .2);   // off unless the plan asks: it popped at every cut
   return xf;
 }
 // the presenter alone (alpha from the matte) in L.cut, drawn with the same transform: put it back over anything that

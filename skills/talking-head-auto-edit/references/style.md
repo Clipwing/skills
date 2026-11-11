@@ -11,7 +11,7 @@ Four videos of the Lera Clipwing YouTube channel (16:9, 1.5–3.5 min, a present
 - Roughly every 10 s an idea leaves the presenter for a full-screen picture of 2–6 s, then cuts back.
 
 ## Full-screen pictures
-- **Warm paper cards** (`#F4F2EE`): a big serif headline typed letter by letter ("SIMPLE WORDS",
+- **Paper cards** (the originals use warm `#F4F2EE`; the editors asked for plain white): a big serif headline typed letter by letter ("SIMPLE WORDS",
   "How would you search for it?"); checklists with a small icon, a bold title and green ticks, where the **future items
   are already there but blurred** and turn sharp as they are said; good / bad columns with ticks and crosses; a yellow
   marker under a title.
@@ -38,3 +38,24 @@ Four videos of the Lera Clipwing YouTube channel (16:9, 1.5–3.5 min, a present
 ## Sound
 - Quiet lo-fi / soft beat music under the whole video, lower under speech.
 - Whooshes on every transition, pops on items and words, keyboard typing on the search bar, a click on Subscribe.
+
+## Editors' rules (2026-11-11)
+
+Two professional editors reviewed a full edit made with this skill. Their notes override the reference notes above
+where they differ; the engine follows them:
+- **Plain white stage** for every card and screen: no gradients, no blurred photo or paused frame behind anything
+  (the end screen too), no dark room or black around screens, no vignette.
+- **Flat**: no 3D lettering, no tilted or perspective cards, no monitor bezel (it reads as stock). A clean window
+  frame around the presenter in a split.
+- **Words on the presenter**: the presenter moves aside and closer, the text takes the other side in a plain panel.
+  The opening line is one line.
+- **Transitions keep the whole frame**: no shrunken or cropped screens, no whip seams, no muddy cross-dissolve, no
+  shape that changes under a transition. A soft blur dissolve is the default.
+- **Timing**: inserts land exactly on the words; the kicker 3–4 frames before the title; every key eased, never
+  linear; a timeline stop lights up when the line reaches it; tip titles stay until they are read; no short presenter
+  shots between inserts.
+- **Layout**: even margins, icons centred in their circles, small ticks, a card header on one line, room above a
+  chart and a visible smallest bar, one-line labels, the accent bar inside its plate, photos never cropped.
+- **Interfaces**: after a click the button stays and the pointer leaves; a phone is large (about half the frame) with
+  large text beside it.
+- **Stock**: no generated-looking footage and no weak photos; a designed card is better.

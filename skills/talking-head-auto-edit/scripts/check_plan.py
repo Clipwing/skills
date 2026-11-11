@@ -11,7 +11,7 @@ from pathlib import Path
 
 FULL = {"title", "list", "compare", "search", "stat", "mindmap", "quote", "image", "bars", "donut", "table", "roadmap", "photo", "video", "split", "post", "phone", "endscreen"}
 OVER = {"words", "callout", "subscribe"}
-TRANS = {"cut", "whip", "zoom", "leak", "flash", "fade", "slide", "push3d"}
+TRANS = {"cut", "blur", "zoom", "leak", "flash", "fade", "whip", "slide", "push3d"}   # whip/slide/push3d play as blur
 
 
 def main():
@@ -41,8 +41,12 @@ def main():
             if b["type"] == "video" and src and not (plan_path.parent / src / "seq.json").is_file(): E(f"{tag}: clip {src}/seq.json not next to the plan (fetch_stock.py)")
         if b["type"] in ("photo", "video") and not (b.get("src") or b.get("srcs")): E(f"{tag}: no src yet: run fetch_stock.py and pick a candidate")
         if b["type"] == "words":
+            if b.get("style") == "headline":
+                if not (b.get("text") or b.get("items")): E(f"{tag}: a headline needs text")
+                if len(str(b.get("text", "")).split()) > 10: Wn(f"{tag}: headline is long (> 10 words): it must fit one line")
             for it in b.get("items") or []:
-                if len(str(it.get("text", "")).split("\n")[0].split()) > 3: Wn(f"{tag}: word '{it.get('text')}' is long for a 3D word (> 3 words)")
+                if len(str(it.get("text", "")).split()) > 5: Wn(f"{tag}: word '{it.get('text')}' is long for the words panel (> 5 words)")
+            if len(b.get("items") or []) > 3: Wn(f"{tag}: more than 3 lines in one words panel")
         items = b.get("items") or b.get("nodes") or []
         for c in ("left", "right"):
             items = items + ((b.get(c) or {}).get("items") or [])

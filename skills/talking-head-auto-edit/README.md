@@ -3,14 +3,14 @@
 Turns a HeyGen avatar video (or any talking-head take) into a finished creator-style video, in 16:9 and 9:16:
 
 - long pauses cut (a breath kept after the last word), word timings from faster-whisper;
-- a person matte (Robust Video Matting): the camera follows the face, and solid 3D words stand in the room beside the head, never over the face;
+- a person matte (Robust Video Matting) and a head track: the camera follows the face; for words on the presenter it moves them aside and a white text panel takes the other side;
 - the presenter cut between wide and medium-close framings, never a tight face crop;
-- full-screen scenes in 3D (WebGL) with depth, shadows and a drifting camera: typed serif chapter titles, checklists,
+- full-screen scenes on a plain white stage, flat to the camera, with soft shadows and a slow push-in: typed serif chapter titles, checklists,
   good vs bad / option vs option cards, bar and donut charts, tables, roadmaps, analytics with tiles, a mind-map board,
-  a search bar filmed off a monitor, quotes on frosted glass, a split screen with the presenter in a window;
-- app screens filmed off a monitor (a search typing, a social post being published) and a phone playing a clip;
+  a search bar in an app window, quotes landing word by word, a split screen with the presenter in a window;
+- app screens in a clean window (a search typing, a social post being published) and a large phone playing a clip;
 - free stock photos (Pexels, Openverse, Wikimedia Commons) and clips (Pixabay or Pexels, free API key) and your own screenshots;
-- whip, zoom, slide and 3D push transitions on every change between the presenter and a card, light leaks, film grain;
+- soft blur and push-in zoom transitions that keep the whole frame on every change between the presenter and a card, light film grain;
 - an end screen with two "watch next" slots and a Subscribe click;
 - captions in 9:16; background music well under the voice; a typed sound-effect cue list for [Real SFX](../real-sfx/);
 - an optional brand kit (colours, fonts, logo); a layout check that no text ever leaves the frame;
@@ -46,5 +46,5 @@ To change a scene later, edit `work/edit.json` and run
 `node scripts/patch.mjs --work work --plan work/edit.json --film work/film-16x9.silent.mp4 --cues work/cues.json`, then the
 mix again: only the changed stretch is rendered.
 
-Fonts: Bricolage Grotesque, Inter, Instrument Serif, Libre Caslon and Montserrat (SIL Open Font License, `page/fonts/`).
+Fonts: Bricolage Grotesque, Inter, Playfair Display and Libre Caslon (SIL Open Font License, `page/fonts/`).
 The RVM matting model (GPL-3.0) is downloaded at run time, not shipped.
