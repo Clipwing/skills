@@ -31,33 +31,31 @@ const OVER = {
     const items = b.items || [], side = wordsSide(b);
     const env = eOut(prog(t, b.start - .1, .45)) * (1 - eIn(prog(t, b.end - .3, .3)));
     if (env <= 0) return;
-    // the panel: on the free side in 16:9, low in 9:16. Sized once for all its lines, so it never resizes.
-    const pw = V ? W * .86 : W * .4, px = V ? (W - pw) / 2 : (side > 0 ? W * .545 : W * .055), pad = 54 * U;
-    const c = scratch('wordsPanel', W, H).getContext('2d');
-    const fits = items.map(it => fitWrap(c, wordText(it), pw - pad * 2 - 30 * U, (it.size || (items.length > 1 ? 76 : 96)) * U, 800, SANS, 2, 44 * U));
-    const gapY = 30 * U, lh = f => f.size * 1.1, blockH = fits.reduce((s2, f) => s2 + f.lines.length * lh(f), 0) + gapY * (fits.length - 1);
-    // the panel grows (eased) as each line arrives, so it never shows empty room for lines still to come
-    const atOf = (it, i) => (it.at ?? (b.start + i * .6)) - .12;
-    let shownH = -gapY; fits.forEach((f, i) => { const kk = eIO(prog(t, atOf(items[i], i) - .05, .35)); shownH += (f.lines.length * lh(f) + gapY) * (i === 0 ? 1 : kk); });
-    const ph = shownH + pad * 2, fullH = blockH + pad * 2, py = V ? H * .62 : H * .5 - fullH / 2 + 20 * U;
-    g.save(); g.globalAlpha = env; g.translate((1 - env) * side * 40 * U, 0);
-    const bl = (1 - env) * 10 * U; if (bl > .3) g.filter = `blur(${bl.toFixed(1)}px)`;
-    shadow(g, 40 * U, 14 * U, .16); g.fillStyle = 'rgba(255,255,255,.97)'; roundRect(g, px, py, pw, ph, 30 * U); g.fill(); noShadow(g);
-    let y = py + pad, lastOn = -1;
+    // one white plate per line, standing in space on the free side: turned towards the presenter (the edge by the
+    // presenter nearer the camera), stacked as they are said, each with a soft shadow. 9:16: low, square to the camera.
+    const pw = V ? W * .82 : W * .36, pad = 44 * U, gapY = 26 * U, cx = V ? W / 2 : (side > 0 ? W * .73 : W * .27);
+    const tmp = scratch('wordsMeasure', 8, 8).getContext('2d');
+    const fits = items.map(it => fitWrap(tmp, wordText(it), pw - pad * 2 - 26 * U, (it.size || (items.length > 1 ? 72 : 92)) * U, 800, SANS, 2, 44 * U));
+    const lh = f => f.size * 1.1, ph = fits.map(f => f.lines.length * lh(f) + pad * 1.5);
+    const total = ph.reduce((a2, x) => a2 + x, 0) + gapY * (ph.length - 1);
+    let y = V ? H * .62 : H * .5 - total / 2 + 10 * U, lastOn = -1;
     items.forEach((it, i) => { if (t >= (it.at ?? b.start + i * .6) - .12) lastOn = i; });
-    items.forEach((it, i) => {
-      const f = fits[i], at = (it.at ?? (b.start + i * .6)) - .12, k = eOut(prog(t, at, .4)), cur = i === lastOn, h = f.lines.length * lh(f);
-      if (k > 0) {
-        g.save(); g.globalAlpha *= clamp(k * 1.6) * (cur || items.length === 1 ? 1 : .42);
-        const b2 = (1 - k) * 10 * U; if (b2 > .3) g.filter = `blur(${b2.toFixed(1)}px)`; g.translate(0, (1 - k) * 18 * U);
-        if (cur) { g.fillStyle = it.color && it.color !== '#FFFFFF' && it.color !== '#fff' ? it.color : C.accent; roundRect(g, px + pad, y + f.size * .08, 8 * U, h - f.size * .2, 4 * U); g.fill(); }
-        g.font = font(f.size, 800); g.fillStyle = C.ink; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-        f.lines.forEach((l, li) => txt(g, l, px + pad + 30 * U, y + li * lh(f) + f.size * .82));
-        g.restore();
-      }
-      y += h + gapY;
-    });
-    g.restore();
+    const plates = items.map((it, i) => {
+      const f = fits[i], h = ph[i], at = (it.at ?? (b.start + i * .6)) - .12, k = eOut5(prog(t, at, .55)), cur = i === lastOn || items.length === 1;
+      const cy = y + h / 2; y += h + gapY;
+      if (k <= 0) return null;
+      const cv = scratch('wordPlate' + i, Math.ceil(pw), Math.ceil(h)), c = clear(cv);
+      c.fillStyle = '#FFFFFF'; roundRect(c, 0, 0, pw, h, 24 * U); c.fill();
+      c.strokeStyle = 'rgba(0,0,0,.06)'; c.lineWidth = 2 * U; roundRect(c, 1, 1, pw - 2, h - 2, 24 * U); c.stroke();
+      if (cur) { c.fillStyle = it.color && !/^#f{3,6}$/i.test(it.color) ? it.color : C.accent; roundRect(c, pad, pad * .75 + f.size * .1, 8 * U, h - pad * 1.5 - f.size * .2, 4 * U); c.fill(); }
+      c.font = font(f.size, 800); c.fillStyle = cur ? C.ink : C.mute; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+      f.lines.forEach((l, li) => txt(c, l, pad + 30 * U, pad * .75 + li * lh(f) + f.size * .84));
+      return { cv, h, cy, k, i };
+    }).filter(Boolean);
+    gl3d(g, G => plates.forEach(p => drawCard(G, p.cv, pw, p.h, {
+      x: cx + (1 - p.k) * side * 60 * U, y: p.cy + (1 - p.k) * 30 * U, z: (1 - p.k) * 140 - p.i * 24,
+      ry: V ? 0 : -side * (16 + 8 * (1 - p.k)), rx: V ? 6 : 4, rz: 0, alpha: env * clamp(p.k * 2), shadow: .2,
+    })));
   },
   // a short label with a hand-drawn arrow towards the presenter
   callout(g, t, b, xf) {

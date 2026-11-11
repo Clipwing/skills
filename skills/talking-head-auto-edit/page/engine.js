@@ -23,15 +23,11 @@ function buildBeats() {
   const READ = 1.6;
   full.forEach(b => { if (TR_ALIAS[b.in]) b.in = TR_ALIAS[b.in]; if (TR_ALIAS[b.out]) b.out = TR_ALIAS[b.out]; });
   full.forEach((b, i) => {
-    // a title stays until it has been typed and read; a quote until its last word has been said and read
-    let need = 0;
-    if (b.type === 'title') need = b.start + .14 + String(b.text || '').length / (b.cps || 30) + READ;
-    if (b.type === 'quote') { const sp = spokenTimes(b.text || '', b.start - .3, b.end + 2).filter(x => x != null); need = (sp.length ? sp[sp.length - 1] : b.start + 1) + READ; }
-    if (need && b.end < need) {
-      // the next card may start later when its first point comes later anyway
-      const next = full[i + 1], first = next ? firstAt(next) : null;
-      if (next && next.start < need && first != null) next.start = Math.max(next.start, Math.min(need, first - .5));
-      b.end = next ? Math.min(need, next.start) : need;
+    // a quote stays until its last word has been said and read (never into the next card). A title is not stretched
+    // here: it must not hang while the presenter talks on; scripts/hold.py gives it a pause in the voice instead
+    if (b.type === 'quote') {
+      const sp = spokenTimes(b.text || '', b.start - .3, b.end + 2).filter(x => x != null), need = (sp.length ? sp[sp.length - 1] : b.start + 1) + 1.2, next = full[i + 1];
+      if (b.end < need) b.end = next ? Math.min(need, next.start) : need;
     }
     const its = [...(b.items || []), ...(b.steps || []), ...(b.bars || []), ...(b.parts || []), ...(b.rows || []), ...(b.nodes || []), ...(b.left?.items || []), ...(b.right?.items || [])].filter(x => x.at != null);
     if (!its.length) return;

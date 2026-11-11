@@ -20,11 +20,17 @@ function stage(g, t, b, opt = {}) {
   g.fillStyle = opt.bg || b.bg || C.paper; g.fillRect(0, 0, W, H);
 }
 function foreground() {}
-// how a card stands at time t: square to the camera; it rises a little and settles, then the camera pushes in slowly
+// how a card stands at time t: in space, turned a little (ry ~8, rx ~4 degrees, alternating sides), with a soft
+// shadow under it. It comes in a bit more turned and settles, then the camera orbits and pushes in slowly. Clean depth:
+// no extruded letters, no dark stage. `flat: true` (titles, quotes) or `vfx.depth: 0` keeps it square to the camera.
 function pose(t, b, o = {}) {
   const ki = eOut5(prog(t, b.start - .12, o.inDur ?? .7)), held = prog(t, b.start, b.end - b.start);
+  const depth = o.flat ? 0 : (PLAN.vfx?.depth ?? 1), side = o.side ?? ((b.i ?? 0) % 2 ? -1 : 1);
+  const ry = (o.ry ?? 8 * side) * depth, rx = (o.rx ?? 4) * depth;
   return {
-    ...o, rx: 0, ry: 0, rz: 0,
+    ...o,
+    ry: ry * (1 + .8 * (1 - ki)) - side * 3 * depth * eIO(held),
+    rx: rx * (1 + .5 * (1 - ki)), rz: (o.rz ?? 0) * depth,
     z: lerp(o.zFrom ?? 110, o.z ?? 0, ki) - eIO(held) * (o.dolly ?? 70),
     x: o.x ?? W / 2, y: (o.y ?? H / 2) + (1 - ki) * 26 * U,
     alpha: (o.alpha ?? 1) * clamp(ki * 3),
@@ -81,7 +87,7 @@ const SCENES = {
       const k = prog(t, t0 + text.length / cps, .5);
       withReveal(c, k, () => { const s = fitFont(c, b.sub, maxW, Math.max(f.size * .32, 40 * U), 500); c.font = font(s, 500); c.fillStyle = C.mute; c.textAlign = 'center'; txt(c, b.sub, W / 2, y0 + f.lines.length * lh + 6 * U); });
     }
-    gl3d(g, G => G.plane(L.card, pose(t, b, { w: W, h: H, zFrom: 60, dolly: 60 })));
+    gl3d(g, G => G.plane(L.card, pose(t, b, { w: W, h: H, zFrom: 60, dolly: 60, flat: true })));
   },
 
   // one sentence, big and heavy on white; every word lands on the moment it is spoken; the key word gets a marker
@@ -105,7 +111,7 @@ const SCENES = {
         x += ww + c.measureText(' ').width; wi++;
       }
     });
-    gl3d(g, G => G.plane(L.card, pose(t, b, { w: W, h: H, zFrom: 60, dolly: 50 })));
+    gl3d(g, G => G.plane(L.card, pose(t, b, { w: W, h: H, zFrom: 60, dolly: 50, flat: true })));
   },
 
   // checklist card: numbered rows; the spoken row lights up, its number turns into a tick; future rows wait, well blurred
@@ -180,8 +186,8 @@ const SCENES = {
       });
     });
     gl3d(g, G => {
-      if (V) { drawCard(G, canv[0], cw, ch, pose(t, b, { y: H * .29 })); drawCard(G, canv[1], cw, ch, pose(t, { ...b, start: b.start + .3 }, { y: H * .71 })); }
-      else { drawCard(G, canv[0], cw, ch, pose(t, b, { x: W * .28 })); drawCard(G, canv[1], cw, ch, pose(t, { ...b, start: b.start + .3 }, { x: W * .72 })); }
+      if (V) { drawCard(G, canv[0], cw, ch, pose(t, b, { y: H * .29, ry: 0, rx: 6 })); drawCard(G, canv[1], cw, ch, pose(t, { ...b, start: b.start + .3 }, { y: H * .71, ry: 0, rx: -4 })); }
+      else { drawCard(G, canv[0], cw, ch, pose(t, b, { x: W * .28, side: 1, ry: 10 })); drawCard(G, canv[1], cw, ch, pose(t, { ...b, start: b.start + .3 }, { x: W * .72, side: -1, ry: -10 })); }
     });
     // VS badge
     const vk = eBack(prog(t, b.start + .5, .4));
@@ -412,7 +418,7 @@ const SCENES = {
         c.font = font(30 * U, 700); c.fillStyle = C.mute; txt(c, s2.label, x, midBase(c, ly)); }
       c.restore();
     });
-    gl3d(g, G => G.plane(L.card, pose(t, b, { w: bw, h: bh, src: [0, 0, bw / L.card.width, bh / L.card.height], s: .94, dolly: 50 })));
+    gl3d(g, G => G.plane(L.card, pose(t, b, { w: bw, h: bh, src: [0, 0, bw / L.card.width, bh / L.card.height], s: .84, dolly: 40, rx: 6, ry: 4 })));
   },
 
   // stock or user photos: one fills the frame with a slow move; two or three stand side by side on white, whole (never
@@ -440,7 +446,7 @@ const SCENES = {
         fg.strokeStyle = 'rgba(0,0,0,.08)'; fg.lineWidth = 2 * U; roundRect(fg, 1, 1, fr.width - 2, fr.height - 2, 16 * U); fg.stroke();
         const cxp = V ? W / 2 : x + fr.width / 2, cyp = V ? (H - capRoom) / 2 + (i - (n - 1) / 2) * (hh + bd * 2 + gap) : (H - capRoom) / 2;
         x += fr.width + gap;
-        drawCard(G, fr, fr.width, fr.height, pose(t, { ...b, start: b.start + i * .25 }, { x: cxp, y: cyp, dolly: 40, shadow: .22 }));
+        drawCard(G, fr, fr.width, fr.height, pose(t, { ...b, start: b.start + i * .25 }, { x: cxp, y: cyp, dolly: 40, shadow: .22, side: i % 2 ? -1 : 1, ry: (i % 2 ? -6 : 6), rz: (i % 2 ? 1.2 : -1.2) }));
       }));
     }
     caption(g, t, b);
@@ -509,7 +515,7 @@ function windowShot(g, t, b) {
   const sc = V ? .92 : .86, r = 26 * U, win = scratch('window', W, H), wg = clear(win);
   wg.save(); roundRect(wg, 0, 0, W, H, r / sc); wg.clip(); blit(wg, L.ui, 0, 0); wg.restore();
   wg.strokeStyle = 'rgba(0,0,0,.12)'; wg.lineWidth = 2 * U / sc; roundRect(wg, 1, 1, W - 2, H - 2, r / sc); wg.stroke();
-  gl3d(g, G => drawCard(G, win, W, H, pose(t, b, { s: sc, dolly: 60, shadow: .2 })));
+  gl3d(g, G => drawCard(G, win, W, H, pose(t, b, { s: sc * .93, dolly: 50, shadow: .2, ry: 6 * ((b.i ?? 0) % 2 ? -1 : 1), rx: 5 })));
 }
 
 // a caption plate for photos and clips: white, a soft shadow, the accent bar inside the plate
