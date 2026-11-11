@@ -116,7 +116,7 @@ SCENES.phone = async function (g, t, b) {
   c.fillStyle = '#000'; roundRect(c, pw / 2 - 60 * U, bez + 14 * U, 120 * U, 34 * U, 17 * U); c.fill();   // the camera island
   // the phone: large (about half the frame in 16:9; its bottom runs just off the frame), square to the camera
   const right = b.side !== 'left', px = V ? W / 2 : W * (right ? .68 : .32), py = V ? H * .58 : H * .04 + ph / 2;
-  gl3d(g, G => drawCard(G, card, pw, ph, pose(t, b, { x: px, y: py, shadow: .24, dolly: 40, side: right ? 1 : -1, ry: right ? -12 : 12, rx: 4, rz: right ? 1.5 : -1.5 })));
+  gl3d(g, G => drawCard(G, card, pw, ph, pose(t, b, { x: px, y: py, shadow: .24, dolly: 40, side: right ? 1 : -1, ry: right ? -6 : 6, rx: 2, rz: right ? .8 : -.8 })));
   if (b.title && !V) {
     // the kicker first, the title a few frames later
     const ko = eIn(prog(t, b.end - .4, .4)), x0 = right ? W * .08 : W * .54, f = fitWrap(g, b.title, W * .4, 96 * U, 800, SANS, 3);

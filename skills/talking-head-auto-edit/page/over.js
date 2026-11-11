@@ -52,10 +52,14 @@ const OVER = {
       f.lines.forEach((l, li) => txt(c, l, pad + 30 * U, pad * .75 + li * lh(f) + f.size * .84));
       return { cv, h, cy, k, i };
     }).filter(Boolean);
-    gl3d(g, G => plates.forEach(p => drawCard(G, p.cv, pw, p.h, {
-      x: cx + (1 - p.k) * side * 60 * U, y: p.cy + (1 - p.k) * 30 * U, z: (1 - p.k) * 140 - p.i * 24,
+    // the plates are laid out for the settled framing and then pinned to the room: when the camera moves (easing in,
+    // easing back out, the handheld drift) they move and scale with the wall behind them, never with the screen
+    const ref = V ? xf : presenterXf(clamp(t, b.start + .3, b.end - .35)), m = xf.s / ref.s;
+    const pin = (x, y2) => [xf.x + (x - ref.x) * m, xf.y + (y2 - ref.y) * m];
+    gl3d(g, G => plates.forEach(p => { const [px, py] = pin(cx, p.cy); drawCard(G, p.cv, pw, p.h, {
+      x: px + (1 - p.k) * side * 60 * U, y: py + (1 - p.k) * 30 * U, z: (1 - p.k) * 140 - p.i * 24, s: m,
       ry: V ? 0 : side * (11 + 6 * (1 - p.k)), rx: V ? 4 : 0, rz: 0, alpha: env * clamp(p.k * 2), shadow: .2,
-    })));
+    }); }));
   },
   // a short label with a hand-drawn arrow towards the presenter
   callout(g, t, b, xf) {

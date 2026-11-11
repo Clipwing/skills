@@ -89,8 +89,10 @@ for an unattended run.
 python scripts/hold.py --work work --plan work/edit.json --dry    # the pauses it would add
 python scripts/hold.py --work work --plan work/edit.json
 ```
-After each `title` the presenter's voice pauses briefly (silence after the spoken title, the frame held behind the
-card), so the card can be read and the voice never runs ahead of the picture; the title ends when the voice resumes.
+The title card goes up as the presenter starts saying it; right after the title's last word has stopped sounding
+(found in voice.wav, not from the word timings, which run early or late) a micro pause is added and the card leaves
+before the presenter carries on. The section's content is never said while only its title is on screen. Every pause
+is printed with the voice level at the cut; a CHECK line means the cut is not in silence: fix it before rendering.
 It moves every later time in the plan and the work files. `--undo` takes the pauses out (do that before re-planning).
 
 ### 3. Check the plan, then the look on stills

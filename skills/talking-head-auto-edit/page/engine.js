@@ -26,8 +26,10 @@ function buildBeats() {
     // a quote stays until its last word has been said and read (never into the next card). A title is not stretched
     // here: it must not hang while the presenter talks on; scripts/hold.py gives it a pause in the voice instead
     if (b.type === 'quote') {
-      const sp = spokenTimes(b.text || '', b.start - .3, b.end + 2).filter(x => x != null), need = (sp.length ? sp[sp.length - 1] : b.start + 1) + 1.2, next = full[i + 1];
-      if (b.end < need) b.end = next ? Math.min(need, next.start) : need;
+      // ...but no longer: it leaves soon after the sentence is said, the presenter carries on
+      const sp = spokenTimes(b.text || '', b.start - .3, b.end + 2).filter(x => x != null), lastW = sp.length ? WORDS.find(w => w.s === sp[sp.length - 1]) : null;
+      const need = Math.max(b.start + 1.6, (lastW ? lastW.e : b.start + 1) + .5), next = full[i + 1];
+      b.end = next ? Math.min(need, next.start) : need;
     }
     const its = [...(b.items || []), ...(b.steps || []), ...(b.bars || []), ...(b.parts || []), ...(b.rows || []), ...(b.nodes || []), ...(b.left?.items || []), ...(b.right?.items || [])].filter(x => x.at != null);
     if (!its.length) return;
